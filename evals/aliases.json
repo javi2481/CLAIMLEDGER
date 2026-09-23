@@ -1,0 +1,44 @@
+[
+  {
+    "v1": "consolidado|resultado_neto",
+    "statement": "income_statement",
+    "scope": "consolidated",
+    "metric": "net_income"
+  },
+  {
+    "v1": "controlante|resultado_atribuible_controladora",
+    "statement": "income_statement",
+    "scope": "parent_attributable",
+    "metric": "net_income"
+  },
+  {
+    "v1": "consolidado|resultado_bruto",
+    "statement": "income_statement",
+    "scope": "consolidated",
+    "metric": "gross_profit"
+  },
+  {
+    "v1": "consolidado|resultado_operativo",
+    "statement": "income_statement",
+    "scope": "consolidated",
+    "metric": "operating_income"
+  },
+  {
+    "v1": "consolidado|resultado_antes_impuesto",
+    "statement": "income_statement",
+    "scope": "consolidated",
+    "metric": "income_before_tax"
+  },
+  {
+    "v1": "consolidado|impuesto_ganancias",
+    "statement": "income_statement",
+    "scope": "consolidated",
+    "metric": "income_tax"
+  },
+  {
+    "v1": "consolidado|resultado_no_controlante",
+    "statement": "income_statement",
+    "scope": "consolidated",
+    "metric": "nci_income"
+  }
+]

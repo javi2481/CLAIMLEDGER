@@ -38,8 +38,8 @@ Chain strategy: pending
 
 ## Phase 2: Identity + digits (commit 2)
 
-- [ ] 2.1 RED: `tests/test_identity.py` neighbor keys; fold+period; `digits_ars`/`signed_ars` fixtures; empty→None; aliases 1:1.
-- [ ] 2.2 GREEN: `identity.py` (`identity_key`, `fold`, period, alias) + `digits.py` + `evals/aliases.json` (7 rows).
+- [x] 2.1 RED: `tests/test_identity.py` neighbor keys; fold+period; `digits_ars`/`signed_ars` fixtures; empty→None; aliases 1:1.
+- [x] 2.2 GREEN: `identity.py` (`identity_key`, `fold`, period, alias) + `digits.py` + `evals/aliases.json` (7 rows).
 
 ## Phase 3: Claim + evidence (commit 3)
 
