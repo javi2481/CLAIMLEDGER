@@ -1,4 +1,7 @@
 .atl/
+.engram/
+.codegraph/
+/verify-*.json
 .venv/
 venv/
 __pycache__/
