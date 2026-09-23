@@ -53,8 +53,8 @@ Chain strategy: pending
 
 ## Phase 5: Lookup (commit 5)
 
-- [ ] 5.1 RED: `tests/test_lookup.py` fold; YPF `off_corpus`; recipe_no_extract sources; narrative; vs→compare; metric order; no `rejected`.
-- [ ] 5.2 GREEN: `lookup.py` `Intent`; 9-step order; issuer BYMA.
+- [x] 5.1 RED: `tests/test_lookup.py` fold; YPF `off_corpus`; recipe_no_extract sources; narrative; vs→compare; metric order; no `rejected`.
+- [x] 5.2 GREEN: `lookup.py` `Intent`; 9-step order; issuer BYMA.
 
 ## Phase 6: Query (commit 6)
 
