@@ -1,0 +1,597 @@
+{
+  "version": "identity_v1",
+  "gold_ref": "recipes/financial_statement.json",
+  "notes": "IDP contract gold. Numeric values match recipes/financial_statement.json. Do not merge with docs/hechos_eeff.json (demo overlay). Narrative cases are capa 3; the layer-2 harness skips them.",
+  "cases": [
+    {
+      "id": "id-01",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el RESULTADO NETO DEL PERÍODO consolidado del 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-02",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el resultado neto consolidado del EEFF al 31 de marzo de 2026?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-03",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Resultado neto consolidado 2T26",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|net_income",
+      "expected_value": "81956525",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-04",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el resultado neto consolidado al 30 de junio de 2026?",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|net_income",
+      "expected_value": "81956525",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-05",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Resultado atribuible a la participación controlante 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|parent_attributable|net_income",
+      "expected_value": "21259769",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-06",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Resultado atribuible a la controlante 2T26",
+      "expected_identity": "BYMA|2026-06-30|income_statement|parent_attributable|net_income",
+      "expected_value": "81946993",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-07",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el resultado neto atribuible a los propietarios del 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|parent_attributable|net_income",
+      "expected_value": "21259769",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-08",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Síntesis del EEFF 1T26: resultado neto consolidado",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-09",
+      "partition": "identity",
+      "route": "identity",
+      "question": "EEFF 2T26 participación controlante",
+      "expected_identity": "BYMA|2026-06-30|income_statement|parent_attributable|net_income",
+      "expected_value": "81946993",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "id-10",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál fue el resultado neto del primer trimestre de 2026?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-01",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "¿Cuál es el resultado neto del período 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "21259769",
+        "22362983"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-02",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado neto del período del EEFF de marzo 2026",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "21259769",
+        "22362983"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-03",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado neto del período 2T26",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|net_income",
+      "expected_value": "81956525",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "81946993"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-04",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "¿Cuál es el neto del trimestre 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "21259769",
+        "22362983"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-05",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "RESULTADO NETO DEL PERÍODO consolidado 1T26, no la fila de al lado",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "21259769"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-06",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado neto del segundo trimestre 2026, no el atribuible",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|net_income",
+      "expected_value": "81956525",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "81946993"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-07",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "En el estado de resultados 1T26, ¿cuál es el resultado neto del período?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "21259769",
+        "22362983"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-08",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "1T26 resultado atribuible a la participación controlante, no el consolidado",
+      "expected_identity": "BYMA|2026-03-31|income_statement|parent_attributable|net_income",
+      "expected_value": "21259769",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "reject_values": [
+        "21262335",
+        "22362983"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-09",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado neto del período 1T26 ignorando la columna del ejercicio anterior",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "22362983"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "nb-10",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "2T26 resultado neto del período, no 81.946.993",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|net_income",
+      "expected_value": "81956525",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "81946993"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-01",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Comparar resultado neto consolidado 1T26 vs 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-02",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "¿Cuál es mayor, el resultado neto del 1T26 o el del 2T26?",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-03",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Diferencia del resultado neto consolidado entre marzo y junio 2026",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-04",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Comparar resultado atribuible a la controlante 1T26 vs 2T26",
+      "expected_identity": "BYMA|*|income_statement|parent_attributable|net_income",
+      "expected_values": [
+        "21259769",
+        "81946993"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-05",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Resultado atribuible a la participación controlante en ambos períodos 1T26 y 2T26",
+      "expected_identity": "BYMA|*|income_statement|parent_attributable|net_income",
+      "expected_values": [
+        "21259769",
+        "81946993"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-06",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Resultado neto consolidado 1T26 versus 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-07",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Compará el consolidado de ambos trimestres 1T26 y 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-08",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "1T26 vs 2T26 resultado neto del período",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-09",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Evolución del resultado neto consolidado 1T26 comparado con 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|net_income",
+      "expected_values": [
+        "21262335",
+        "81956525"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "expected_abstain": null
+    },
+    {
+      "id": "cp-10",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Comparar participación controlante de marzo y junio 2026",
+      "expected_identity": "BYMA|*|income_statement|parent_attributable|net_income",
+      "expected_values": [
+        "21259769",
+        "81946993"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_provenance": "participación controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "ab-01",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Cuál fue el precio de cierre de YPF en BYMA el 3 de enero?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "ab-02",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Cuál es el resultado neto del período en la memoria anual?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "ab-03",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Cuál es el resultado neto consolidado del comunicado de prensa?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "ab-04",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Qué dice la cláusula 5 del contrato?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "ab-05",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "Precio de YPF el 3 enero",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "na-01",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "Explicá el crecimiento de ingresos de BYMA",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-02",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "¿Cuál es la política contable de reconocimiento de ingresos?",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-03",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "Resumí los highlights de la presentación de resultados",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-04",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "¿Qué hechos relevantes menciona el comunicado?",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-05",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "¿Qué se dijo en el conference call / webcast?",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-06",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "¿Qué dicen los slides sobre el negocio?",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-07",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "Explicá la variación de comisiones en el trimestre",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-08",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "Contexto de mercado en la presentación de resultados",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-09",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "Explicá cómo describe el directorio el año en la memoria",
+      "expected_abstain": null
+    },
+    {
+      "id": "na-10",
+      "partition": "narrative",
+      "route": "narrative",
+      "skip": true,
+      "question": "¿Por qué crecieron los ingresos operativos según los highlights?",
+      "expected_abstain": null
+    }
+  ]
+}

@@ -63,8 +63,8 @@ Chain strategy: pending
 
 ## Phase 7: Gold v1 (commit 7)
 
-- [ ] 7.1 RED: `tests/test_gold_v1.py` `id-01`=`21262335`; `nb-01` rejects; `cp-01` wildcard; `na-*` skip; no-docling scan.
-- [ ] 7.2 GREEN: port `evals/identity_v1.json` (45); alias-only IDs; numbers frozen.
+- [x] 7.1 RED: `tests/test_gold_v1.py` `id-01`=`21262335`; `nb-01` rejects; `cp-01` wildcard; `na-*` skip; no-docling scan.
+- [x] 7.2 GREEN: port `evals/identity_v1.json` (45); alias-only IDs; numbers frozen.
 
 ## Phase 8: Gold v2 (commit 8)
 
