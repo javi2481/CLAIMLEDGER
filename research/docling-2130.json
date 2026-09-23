@@ -1,0 +1,114 @@
+{
+  "search_id": "search_fd3c6b5de1ba905aee34c9ecc1315306",
+  "session_id": "session_fd3c6b5de1ba905aee34c9ecc1315306",
+  "status": "ok",
+  "results": [
+    {
+      "url": "https://docling.ai/",
+      "title": "\n            Docling \u2014 Turn complex documents into structured data your AI can use\n        ",
+      "publish_date": null,
+      "excerpts": [
+        "# Your documents are more than text.\n## Structure, carried through conversion\n[All supported formats](https://docling.ai/formats/)\nOne page of a real academic paper: two columns, a complex table, a figure with its caption, and a running page header. Switch layers to see what Docling recovers \u2014 and what it would cost you to lose.\n\n...\n\n## Convert once, reuse forever\nEverything lands in DocLang, one open, high-fidelity document format, and the detail that lives in each original file \u2014 a Word file's section structure or review comments, a diagram in your Excel spreadsheet \u2014 comes across intact instead of being flattened or dropped.\n\n...\n\n### Any format in\n[### DocLang One open, standardized form for every document. Everything the conversion found \u2014 structure, tables, reading order and each format's own detail \u2014 kept together in one place. doclang.ai \u2192](https://doclang.ai/)\n\n### Any format out, anytime\nTurn a document into Markdown, HTML, JSON or context-informed chunks whenever a later step needs it \u2014 produced from DocLang, without converting the original file again.\n* Markdown\n* HTML\n* JSON\n* Text\nWhy Docling\n\n...\n\n## Built for structure, not just text\n### One document model\nMany input formats converge on the same expressive DoclingDocument, serializable to Markdown, JSON, HTML and DocLang. One shape to write your application against.\n[DoclingDocument](https://docling-project.github.io/docling/concepts/docling_document/)"
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling",
+      "title": "GitHub - docling-project/docling: Get your documents ready for gen AI \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# Docling\n## Features\n* \ud83d\uddc2\ufe0f Parsing of [multiple document formats](https://docling-project.github.io/docling/usage/supported_formats/) including PDF, DOCX, PPTX, XLSX, HTML, EPUB, Apple Pages, WAV, MP3, WebVTT, Box Notes, email formats (EML, MSG), images (PNG, TIFF, JPEG, ...), LaTeX, DocLang, plain text, and more\n* \ud83d\udcd1 Advanced PDF understanding incl.\npage layout, reading order, table structure, code, formulas, image classification, and more\n* \ud83e\uddec A unified, expressive [DoclingDocument](https://docling-project.github.io/docling/concepts/docling_document/) representation format\n* \u21aa\ufe0f Various [export formats](https://docling-project.github.io/docling/usage/supported_formats/) and options, including Markdown, HTML, WebVTT, DocLang, [DocTags](https://arxiv.org/abs/2503.11576) and lossless JSON\n* \ud83d\udcdc Support for several application-specific XML schemas including [DocLang](https://doclang.ai/) , [USPTO](https://www.uspto.gov/patents) patents, [JATS](https://jats.nlm.nih.gov/) articles, and [XBRL](https://www.xbrl.org/) financial reports.\n* \ud83d\udd12 Local execution capabilities for sensitive data and air-gapped environments"
+      ]
+    },
+    {
+      "url": "https://docling.org/",
+      "title": "Docling - Free Open-Source Document Parsing, OCR & Granite VLM Engine | Docling.org",
+      "publish_date": null,
+      "excerpts": [
+        "Docling is the 100% free, local document parsing engine created by IBM Research. Convert PDF, DOCX, PPTX, XLSX & images to clean Markdown, JSON & RAG chunks. Try CLI, Python & MCP."
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling/blob/main/CHANGELOG.md",
+      "title": "docling/CHANGELOG.md at main - GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# docling-project/docling \u2014 CHANGELOG.md\n## [v2.129.0](https://github.com/docling-project/docling/releases/tag/v2.129.0) - 2026-09-18\n### Fix\n* **html:** Default a zero colspan or rowspan to 1 in HTML tables ([](https://github.com/docling-project/docling/issues/4287)) ([`6cb036c`](https://github.com/docling-project/docling/commit/6cb036c9d79a432a662688c63ef64637f879c498))\n\n...\n\n## [v2.120.0](https://github.com/docling-project/docling/releases/tag/v2.120.0) - 2026-08-14\n### Fix\n* **html:** Stop a header-only rowspan table from crashing the backend ([](https://github.com/docling-project/docling/issues/3827)) ([`e00be1d`](https://github.com/docling-project/docling/commit/e00be1dd759d37bd3509b5a44feaeea4d332c1e8))\n\n...\n\n## [v2.115.0](https://github.com/docling-project/docling/releases/tag/v2.115.0) - 2026-07-23\n### Documentation\n* Add format-specific behavior of table serializers ([](https://github.com/docling-project/docling/issues/3833)) ([`530d12d`](https://github.com/docling-project/docling/commit/530d12dafc350f1f464adea10a1ea537af50a7f4))\n\n...\n\n## [v2.114.0](https://github.com/docling-project/docling/releases/tag/v2.114.0) - 2026-07-20\n### Feature\n* Add support for legacy binary office formats ([](https://github.com/docling-project/docling/issues/3804)) ([`d0bca90`](https://github.com/docling-project/docling/commit/d0bca90b5a0ae8054186e54196ffb7032875927e))\n\n...\n\n## [v2.112.0](https://github.com/docling-project/docling/releases/tag/v2.112.0) - 2026-07-11\n### Feature\n* **dclx:** Add DocLang archive input backend ([](https://github.com/docling-project/docling/issues/3779)) ([`475ce65`](https://github.com/docling-project/docling/commit/475ce65ad46065d5edcdf437f53eb3c745af4b9a))\n\n...\n\n### Fix\n* **xbrl:** Interpolate document hash in convert error message ([](https://github.com/docling-project/docling/issues/3769)) ([`df7050b`](https://github.com/docling-project/docling/commit/df7050b34cd1adb588942098213d3222c67256d1))\n\n...\n\n## [v2.109.0](https://github.com/docling-project/docling/releases/tag/v2.109.0) - 2026-07-03\n### Fix\n* **tests:** Correct XBRL source path to point to 'sources/' subdirectory ([](https://github.com/docling-project/docling/issues/3734)) ([`b77612c`](https://github.com/docling-project/docling/commit/b77612ce4770d052aa90af23681b55ab0be38971))\n\n...\n\n## [v2.107.0](https://github.com/docling-project/docling/releases/tag/v2.107.0) - 2026-06-24\n### Feature\n* Add OpenDocument backend support and improve ODF image/table handling ([](https://github.com/docling-project/docling/issues/3480)) ([`e2afe38`](https://github.com/docling-project/docling/commit/e2afe38196f6071ca2f3be0a4d6f3bad01997e32))\n\n...\n\n## [v2.105.0](https://github.com/docling-project/docling/releases/tag/v2.105.0) - 2026-06-22\n### Fix\n* **asciidoc:** Parse table cells with format specifiers ([](https://github.com/docling-project/docling/issues/3647)) ([`7e0aed9`](https://github.com/docling-project/docling/commit/7e0aed97ac907e6f6ccc6dde73fe5c55e99382a4))\n\n...\n\n## [v2.92.0](https://github.com/docling-project/docling/releases/tag/v2.92.0) - 2026-04-29\n### Feature\n* Add ResponseFormat.DOCLANG and parsing branch in VLM pipeline ([](https://github.com/docling-project/docling/issues/3350)) ([`0f6f8d0`](https://github.com/docling-project/docling/commit/0f6f8d0bcdf9ee41fef5a34845f7d4231a7219c7))\n\n...\n\n## [v2.72.0](https://github.com/docling-project/docling/releases/tag/v2.72.0) - 2026-02-03\n### Fix\n* **backend:** Improve Excel table bounds detection and flatten merged cells ([](https://github.com/docling-project/docling/issues/2778)) ([`3110c43`](https://github.com/docling-project/docling/commit/3110c439da48fe215379492a29a310e64e9d67e7))\n\n...\n\n## [v2.69.0](https://github.com/docling-project/docling/releases/tag/v2.69.0) - 2026-01-20\n### Documentation\n* Correct broken link to supported formats ([](https://github.com/docling-project/docling/issues/2878)) ([`16e88d5`](https://github.com/docling-project/docling/commit/16e88d50fa9e50351b1847897ff10aa4a3324872))\n\n...\n\n## [v2.56.0](https://github.com/docling-project/docling/releases/tag/v2.56.0) - 2025-10-13\n### Fix\n* Proper heading support in rich tables for HTML backend ([](https://github.com/docling-project/docling/issues/2394)) ([`9705f40`](https://github.com/docling-project/docling/commit/9705f4020c8e7f43cc5b0658c9641df24508502f))\n\n...\n\n## [v2.55.0](https://github.com/docling-project/docling/releases/tag/v2.55.0) - 2025-09-30\n### Feature\n* Rich tables support for HTML backend ([](https://github.com/docling-project/docling/issues/2324)) ([`c803abe`](https://github.com/docling-project/docling/commit/c803abed9ae98489184791a70bf49cac0c83ab89))\n\n...\n\n## [v2.53.0](https://github.com/docling-project/docling/releases/tag/v2.53.0) - 2025-09-17\n### Feature\n* **RapidOcr:** Support generic extra arguments for RapidOcr ([](https://github.com/docling-project/docling/issues/2266)) ([`0e95171`](https://github.com/docling-project/docling/commit/0e95171dd64733ba52f2f0906642be24f6237977))\n\n...\n\n## [v2.38.0](https://github.com/docling-project/docling/releases/tag/v2.38.0) - 2025-06-23\n### Feature\n* **markdown:** Add formatting & improve inline support ([](https://github.com/docling-project/docling/issues/1804)) ([`861abcd`](https://github.com/docling-project/docling/commit/861abcdcb0d406342b9566f81203b87cf32b7ad0))\n\n...\n\n## [v2.31.1](https://github.com/docling-project/docling/releases/tag/v2.31.1) - 2025-05-12\n### Documentation\n* Update supported formats guide ([](https://github.com/docling-project/docling/issues/1463)) ([`3afbe6c`](https://github.com/docling-project/docling/commit/3afbe6c9695d52cf6ed8b48b2f403df7d53342e5))"
+      ]
+    },
+    {
+      "url": "https://pypi.org/project/docling",
+      "title": "docling \u00b7 PyPI",
+      "publish_date": "2026-09-18",
+      "excerpts": [
+        "# Docling\n## Features\n* \u21aa\ufe0f Various [export formats](https://docling-project.github.io/docling/usage/supported_formats/) and options, including Markdown, HTML, WebVTT, DocLang, [DocTags](https://arxiv.org/abs/2503.11576) and lossless JSON\n* \ud83d\udcdc Support for several application-specific XML schemas including [DocLang](https://doclang.ai) , [USPTO](https://www.uspto.gov/patents) patents, [JATS](https://jats.nlm.nih.gov/) articles, and [XBRL](https://www.xbrl.org/) financial reports.\n* \ud83d\udd12 Local execution capabilities for sensitive data and air-gapped environments\n\n...\n\n### What's new\n* \ud83d\udcbc Parsing of XBRL (eXtensible Business Reporting Language) documents for financial reports\n* \ud83d\udce7 Parsing of email files ( `.eml` , `.msg` )\n* \ud83d\udcda Parsing of EPUB (Electronic Publication) files for e-books\n* \ud83c\udf4e Parsing of Apple Pages ( `.pages` ) documents, both container generations (Pages 5+ and iWork '09)\n\n...\n\n## Provides Extra\n`asr` `easyocr` `htmlrender` `ocrmac` `onnxruntime` `rapidocr` `remote-serving` `tesserocr` `vlm` `xbrl`\n\n## Tags\n`convert` `docling` `document` `docx` `html` `layout model` `markdown` `pdf` `segmentation` `table former` `table structure`"
+      ]
+    },
+    {
+      "url": "https://github.com/DS4SD/docling",
+      "title": "GitHub - docling-project/docling: Get your documents ready for gen AI \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# Docling\n## Features\n* \ud83d\uddc2\ufe0f Parsing of [multiple document formats](https://docling-project.github.io/docling/usage/supported_formats/) including PDF, DOCX, PPTX, XLSX, HTML, EPUB, WAV, MP3, WebVTT, email formats (EML, MSG), images (PNG, TIFF, JPEG, ...), LaTeX, DocLang, plain text, and more\n* \ud83d\udcd1 Advanced PDF understanding incl.\npage layout, reading order, table structure, code, formulas, image classification, and more\n* \ud83e\uddec A unified, expressive [DoclingDocument](https://docling-project.github.io/docling/concepts/docling_document/) representation format\n* \u21aa\ufe0f Various [export formats](https://docling-project.github.io/docling/usage/supported_formats/) and options, including Markdown, HTML, WebVTT, DocLang, [DocTags](https://arxiv.org/abs/2503.11576) and lossless JSON\n* \ud83d\udcdc Support for several application-specific XML schemas including [DocLang](https://doclang.ai/) , [USPTO](https://www.uspto.gov/patents) patents, [JATS](https://jats.nlm.nih.gov/) articles, and [XBRL](https://www.xbrl.org/) financial reports.\n* \ud83d\udd12 Local execution capabilities for sensitive data and air-gapped environments\n\n...\n\n### What's new\n* \ud83d\udcc4 Parsing of ODF (OpenDocument Format) files for text documents ( `.odt` ), spreadsheets ( `.ods` ), and presentations ( `.odp` )\n* \ud83d\udcbc Parsing of XBRL (eXtensible Business Reporting Language) documents for financial reports\n* \ud83d\udce7 Parsing of email files ( `.eml` , `.msg` )"
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling/blob/main/docs/concepts/serialization.md",
+      "title": "docling/docs/concepts/serialization.md at main \u00b7 docling-project/docling \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# docling-project/docling \u2014 docs/concepts/serialization.md\n## Format-specific behaviors\nEach serializer makes format-specific trade-offs when representing document\nfeatures that have no direct equivalent in the target format. The most notable\ncase is **table cell spanning** (rowspan / colspan).\n\n### Table cell spans\nDocling's internal table model (`TableData.grid`) preserves full span metadata\nfor every cell - `row_span`, `col_span`, `start_row_offset_idx`, and\n`start_col_offset_idx`. How that metadata is rendered depends on the output\nformat:\n| Format | Span handling |\n| JSON | Preserved. The full `TableData` model is serialized losslessly, including all span fields. |\n| DocTags | Preserved. Tables are serialized via OTSL, which natively encodes span structure. |\n| HTML | Preserved. Cells are emitted with native `rowspan` / `colspan` attributes. |\n| Markdown | **Flattened.** Markdown tables have no span syntax, so the serializer writes cell text at the origin position only; all other grid positions covered by the span are rendered as empty cells. |\n| LaTeX | **Flattened.** The `tabular` environment is emitted without `\\multirow` / `\\multicolumn` commands for now. |\n| WebVTT | **Not applicable.** Tables are not serialized (WebVTT is a subtitle/caption format). |\nIf your downstream workflow depends on accurate table structure (e.g. merged\nheader cells), prefer `export_to_html()` or `export_to_dict()` over\n`export_to_markdown()`. Alternatively, you can override the default table\nserializer for any format by subclassing `BaseTableSerializer` and passing your"
+      ]
+    },
+    {
+      "url": "https://github.com/BMaster1987/Docling/blob/main/docs/usage/supported_formats.md",
+      "title": "Docling/docs/usage/supported_formats.md at main \u00b7 BMaster1987/Docling \u00b7 GitHub",
+      "publish_date": "2009-02-09",
+      "excerpts": [
+        "# BMaster1987/Docling \u2014 docs/usage/supported_formats.md\n## Supported input formats\n| Format | Description |\n| PDF |  |\n| DOCX, XLSX, PPTX | Default formats in MS Office 2007+, based on Office Open XML |\n| Markdown |  |\n| AsciiDoc | Human-readable, plain-text markup language for structured technical content |\n| LaTeX | Scientific document preparation system |\n| HTML, XHTML |  |\n| CSV |  |\n\n...\n\n| Format | Description |\n| PDF |  |\n| DOCX, XLSX, PPTX | Default formats in MS Office 2007+, based on Office Open XML |\n| Markdown |  |\n| MP4, AVI, MOV | Video formats \u2014 audio track is extracted and transcribed (requires `asr` extra and `ffmpeg`) |\n| WebVTT | Web Video Text Tracks format for displaying timed text |\nSchema-specific support:\n| Format | Description |\n| USPTO XML | XML format followed by [USPTO](https://www.uspto.gov/patents) patents |\n| Docling JSON | JSON-serialized [Docling Document](https://github.com/BMaster1987/Docling/blob/main/docs/usage/../concepts/docling_document.md) |\n\n## Supported output formats\n| Format | Description |\n| HTML | Both image embedding and referencing are supported |\n| Markdown |  |\n| JSON | Lossless serialization of Docling Document |\n| [Doctags](https://arxiv.org/pdf/2503.11576) | Markup format for efficiently representing the full content and layout characteristics of a document |\n| WebVTT | Web Video Text Tracks format for displaying timed text |"
+      ]
+    },
+    {
+      "url": "https://docling.org/doc/",
+      "title": "Docling Documentation - Python SDK, CLI Manual, OCR & REST API Guide | Docling.org",
+      "publish_date": null,
+      "excerpts": [
+        "# Docling Complete Technical Documentation\n* Includes state-of-the-art layout analysis, reading order recovery, and **TableFormer v2** table structure extraction models.\n* Supports multiple pluggable OCR engines: RapidOCR, Tesseract ( tesserocr ), EasyOCR, OcrMac, and Nemotron OCR.\n\n...\n\n## 7. Multi-Format Extraction (XLSX, PPTX, DOCX, CAD/Drawings & Audio)\n### 7.1 Microsoft Excel (.xlsx) Multi-Sheet Tabular Parsing\nDocling parses Excel spreadsheets sheet-by-sheet, preserving merged headers, column hierarchies, and numerical formatting as Markdown/HTML tables:\npython \u2014 parse excel spreadsheet Copy"
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling-core/blob/main/docling_core/transforms/serializer/markdown.py",
+      "title": "docling-core/docling_core/transforms/serializer/markdown.py at main \u00b7 docling-project/docling-core \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# docling-project/docling-core \u2014 docling_core/transforms/serializer/markdown.py\n```py\n    \"\"\"Recursively add *item* and all its descendants to *visited*.\n\n    When a nested table inside a RichTableCell is flattened, its items are\n    never passed through the normal serialize() path that would mark them\n```\n\n...\n\n```py\n    \"\"\"Collect all text from *item*'s subtree, flattening nested tables.\n\n    Returns a space-joined string of every piece of text found so that the\n    content of a nested table is preserved in a flat, readable form.\n\n    For TableItems the text is pulled from ``data.grid`` cells directly;\n    children are *not* recursed into because they duplicate the grid content\n    for RichTableCells.  For all other items, ``.text`` is collected and\n```\n\n...\n\n```py\n    \"\"\"Count the leading grid rows on which a column header cell starts.\n\n    A header cell spanning several rows is repeated into each row it covers by\n    ``TableData.grid``, so a row is only counted when a header cell actually\n```\n\n...\n\n```py\n    duplicate-dropping handles row-spanning cells: ``TableData.grid`` repeats a\n    spanning cell's text into every row it covers, so the repeated occurrences\n    are suppressed rather than joined to themselves.\n\n    Args:\n        header_rows: The rendered cell texts for each header row, in row order.\n            Each inner list has one entry per column.\n        num_cols: The number of columns in the table, used to size the result\n```\n\n...\n\n```py\n        share a label.  GFM has no way to represent more than one header row,\n        so this is an unavoidable lossy flattening.\n    \"\"\"\n    if not header_rows:\n        return [\"\"] * num_cols\n    flattened = []\n    for col_idx in range(num_cols):\n```\n\n...\n\n```py\n        flattened.append(HEADER_ROW_SEPARATOR.join(parts))\n    return flattened\n\nclass MarkdownTableSerializer(BaseTableSerializer):\n    \"\"\"Markdown-specific table item serializer.\n\n    Markdown pipe tables have exactly one header row and no spans, so a table's\n    column headers are resolved to a single row as follows:\n\n    - a table with no cell marked ``column_header`` keeps row 0 as the header\n```\n\n...\n\n```py\n    table_serializer: BaseTableSerializer = MarkdownTableSerializer()\n    picture_serializer: BasePictureSerializer = MarkdownPictureSerializer()\n    key_value_serializer: BaseKeyValueSerializer = MarkdownKeyValueSerializer()\n```"
+      ]
+    },
+    {
+      "url": "https://docling-project.github.io/docling/",
+      "title": "Index - Docling",
+      "publish_date": null,
+      "excerpts": [
+        "Docling simplifies document processing by parsing diverse formats \u2014 including advanced PDF understanding \u2014 and providing seamless integrations with the generative AI ecosystem."
+      ]
+    },
+    {
+      "url": "https://docling.ai/formats",
+      "title": "Supported formats",
+      "publish_date": null,
+      "excerpts": [
+        "Supported formats\nWhat Docling reads ; Documents. Page-based documents where layout carries meaning. PDF ; Web & publishing. Text and publishing formats with existing structure."
+      ]
+    }
+  ],
+  "usage": [
+    {
+      "name": "sku_search",
+      "count": 1
+    },
+    {
+      "name": "sku_extract_excerpts",
+      "count": 2
+    }
+  ],
+  "warnings": []
+}

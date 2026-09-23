@@ -1,0 +1,114 @@
+{
+  "search_id": "search_c19ec06b6fbcfae0d74098bf6afdfe2f",
+  "session_id": "session_c19ec06b6fbcfae0d74098bf6afdfe2f",
+  "status": "ok",
+  "results": [
+    {
+      "url": "https://docling-project.github.io/docling-graph/reference/provenance",
+      "title": "Provenance - Docling Graph Documentation",
+      "publish_date": null,
+      "excerpts": [
+        "* Fundamentals\nFundamentals\n+ Overview\n+ Installation\nInstallation\n- Overview\n- Requirements\n- Basic Setup\n- GPU Setup\n- API Keys\n+ Schema Definition\nSchema Definition\n- Overview\n- Template Basics\n- Entities vs Components\n- Field Definitions\n- Relationships\n- Validation\n- Advanced Patterns\n- Best Practices\n+ Pipeline Configuration\n\n...\n\n# Provenance API \u00b6\n## Overview \u00b6\nDeterministic data grounding: maps graph nodes back to their source document chunks and pages. No LLM involvement \u2014 the ledger is built from pipeline bookkeeping and bound to graph nodes after conversion.\n**Module:** `docling_graph.core.provenance`\n\n...\n\n## Models \u00b6\n### ProvenanceLedger \u00b6\n| Field | Description |\n| `resolution` | The best precision this run achieved: `\"document\"` (whole-document fallback), `\"chunk\"` (batch-level), or `\"span\"` (at least one verbatim char-offset anchor exists). |\n| `node_level` | `True` for the dense contract (per-node skeleton entries in `nodes` ); `False` for direct (chunk index only). |\n\n...\n\n| Field | Description |\n| `document` | Source identity ( `DocumentOrigin` ); finalized once extraction completes, so it may be `None` mid-run. |\n| `nodes` | `identity_key -> NodeProvenance` , one entry per grounded identity. |\n| `bind_stats` | Populated after binding: `nodes_seen` , `bound_verbatim` , `bound_observed` , `bound_document` , `unresolved` . |\n\n...\n\n### SourceAnchor \u00b6\nOne deterministic link from a node to a location in the source.\n```\n class SourceAnchor ( BaseModel ):  document_id : str = \"\"  chunk_id : int  kind : Literal [ \"observed\" , \"verbatim\" , \"derived\" , \"reconciled\" ] = \"observed\"  span : tuple [ int , int ] | None = None # char offsets into the chunk's enriched text\n```\n\n...\n\n## Binding \u00b6\n### bind_provenance() \u00b6\nWalks the validated model tree along the same catalog paths the extraction contract used, resolves each entity's node ID through the **same** `NodeIDRegistry` instance the graph converter used (so binding can never disagree on IDs), and annotates each node with a `compact_view` .\nRuns the deterministic verbatim locator against each node's _final_ identifier values \u2014 this is what lets grounding survive the dense fill phase refining a skeleton placeholder into a real value. When the identity values don't locate (e.g.\na direct-mode synthesized id that never appears verbatim), the binder falls back to the node's other short, distinctive `str` fields \u2014 a matched description or name grounds the node exactly instead of falling to a coarser tier.\n\n...\n\nReturns bind stats ( `nodes_seen` , `bound_verbatim` , `bound_observed` , `bound_document` , `unresolved` ) and also writes them to `ledger.bind_stats` ."
+      ]
+    },
+    {
+      "url": "https://docling-project.github.io/docling-graph/fundamentals/graph-management/provenance",
+      "title": "Data Grounding & Provenance - Docling Graph Documentation",
+      "publish_date": null,
+      "excerpts": [
+        "* Fundamentals\nFundamentals\n+ Overview\n+ Installation\nInstallation\n- Overview\n- Requirements\n- Basic Setup\n- GPU Setup\n- API Keys\n+ Schema Definition\nSchema Definition\n- Overview\n- Template Basics\n- Entities vs Components\n- Field Definitions\n- Relationships\n- Validation\n- Advanced Patterns\n- Best Practices\n+ Pipeline Configuration\n\n...\n\n# Data Grounding & Provenance \u00b6\n## Overview \u00b6\n**Provenance** maps every graph node back to _where in the source document_ its data came from: the chunk(s), the page(s), and (optionally) the exact character span of the identifier that was found.\nIt is fully **deterministic** \u2014 grounding never involves an LLM call, never changes a prompt, and never changes what gets extracted. It runs as bookkeeping alongside extraction and is bound to the graph after conversion.\nEnabled by default ( `provenance=\"standard\"` ), it works with **both** extraction contracts ( direct and dense ) and needs no changes to your Pydantic templates.\n**What you get:**\n* A `__provenance__` attribute on every entity node in the graph, with the resolved location.\n\n...\n\n## Quick example \u00b6\n```\n SlurryComponent_a1b2c3 -> verbatim [1, 2, 3]\n  SlurryRheologyStudy_9f8e -> observed [1, 2]\n  ScholarlyRheologyPaper_44de -> None   # scope: document (see below)\n```\n\n## The `__provenance__` node attribute \u00b6\nEvery entity node (see Entities vs Components ) gets exactly one `__provenance__` view, in one of four shapes. The name is a dunder ( `__provenance__` ) precisely so it can never collide with a template field \u2014 Pydantic forbids dunder field names.\n\n### 1. Verbatim \u2014 exact location \u00b6\nThe node's identifier was found literally in the document text via a deterministic string scan:\n```\n {  \"document_id\" : \"9f1a2b3c4d5e6f70\" ,  \"match\" : \"verbatim\" ,  \"chunks\" : [ 10 ],  \"pages\" : [ 4 ],  \"refs\" : [ \"#/texts/57\" ]  }\n```\n\n### 2. Approximate \u2014 batch-level (dense only) \u00b6\nNo verbatim match, but the dense skeleton phase saw the node while reading a known set of chunks:\n```\n {  \"document_id\" : \"9f1a2b3c4d5e6f70\" ,  \"match\" : \"observed\" ,  \"chunks\" : [ 3 , 4 ],  \"pages\" : [ 2 ],  \"refs\" : [ \"#/texts/12\" , \"#/tables/1\" ],  \"approximate\" : true  }\n```\n\n...\n\n### 3. Document scope \u00b6\nThe whole document is the fallback answer for the root node and, for the **direct** contract, any node whose identifier can't be located verbatim:\n```\n {  \"document_id\" : \"9f1a2b3c4d5e6f70\" ,  \"scope\" : \"document\"  }\n```\n\n...\n\nA root whose id is generic ( `document_number` ) but whose `assureur` / `title` field is a distinctive phrase found verbatim in the text is pinned to that exact chunk instead \u2014 same locator, same guards (below), applied to a wider set of fields.\n\n...\n\n### 4. Unresolved (dense only) \u00b6\nNo verbatim match and no skeleton observation exists for this node. This is the deliberate failure mode \u2014 **an absent or wrong location is worse than a vague one, so the pipeline never guesses** :\n```\n { \"status\" : \"unresolved\" }\n```\nFail-empty, never fail-wrong\nThe binder resolution ladder is: **verbatim (exact) \u2192 observed (approximate) \u2192 document scope (direct only) \u2192 unresolved (dense only)** . Nothing ever fabricates a location; a node's view only gets _more_ precise across a pipeline run, never less honest.\n\n...\n\n## Dense vs. direct grounding \u00b6\n**Dense** builds a _node-level_ ledger ( `node_level: true` ): the Phase 1 skeleton records which chunk batch a node was observed in, and the fill phase's per-node identifiers are the ones the binder scans for verbatim matches. Because Phase 2 often refines a rough skeleton placeholder into the real value (e.g.\nskeleton `\"SlurryComponent\"` \u2192 filled `\"LiFePO4\"` ), the ledger entry is **re-keyed to the final filled identifier** before binding, so grounding survives that refinement. A node that is neither verbatim-locatable nor skeleton-observed is `unresolved` .\n\n...\n\n## Merge safety \u00b6\n* **Graph cleanup** : when `GraphCleaner` merges two content-identical nodes, their `__provenance__` views are unioned rather than one being discarded \u2014 and `__provenance__` is excluded from the content hash that drives dedup, so two entities with identical data but different anchors still merge correctly.\nProvenance never contributes to node identity ( `graph_id_fields` ) or content hashing \u2014 attaching or unioning a `__provenance__` view can never fork or merge a node that wouldn't otherwise fork or merge.\n\n...\n\n## Configuration \u00b6\n| Value | Behavior |\n| `\"standard\"` (default) | `__provenance__` on every entity node + `provenance.json` , with verbatim locations where possible and approximate/document-scope fallbacks otherwise. |"
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling-graph/blob/main/docs/reference/provenance.md",
+      "title": "docling-graph/docs/reference/provenance.md at main - GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# Provenance API\n## Overview\nDeterministic data grounding: maps graph nodes back to their source document chunks and pages. No LLM involvement \u2014 the ledger is built from pipeline bookkeeping and bound to graph nodes after conversion.\n**Module:** `docling_graph.core.provenance`\n\n...\n\n## Models\n### ProvenanceLedger\n| Field | Description |\n| `resolution` | The best precision this run achieved: `\"document\"` (whole-document fallback), `\"chunk\"` (batch-level), or `\"span\"` (at least one verbatim char-offset anchor exists). |\n| `node_level` | `True` for the dense contract (per-node skeleton entries in `nodes`); `False` for direct (chunk index only). |\n| `chunks` | `chunk_id -> ChunkRecord`, including the enriched chunk **text** \u2014 the ledger is self-contained. |\n| `nodes` | `identity_key -> NodeProvenance`, one entry per grounded identity. |\n| `bind_stats` | Populated after binding: `nodes_seen`, `bound_verbatim`, `bound_observed`, `bound_document`, `unresolved`. |\n\n...\n\n### SourceAnchor\nOne deterministic link from a node to a location in the source.\n```python\nclass SourceAnchor(BaseModel):\n    document_id: str = \"\"\n    chunk_id: int\n    kind: Literal[\"observed\", \"verbatim\", \"derived\", \"reconciled\"] = \"observed\"\n    span: tuple[int, int] | None = None   # char offsets into the chunk's enriched text\n```\n\n### NodeProvenance\nFull lineage for one grounded identity.\n```python\nclass NodeProvenance(BaseModel):\n    identity_key: str\n    catalog_path: str = \"\"\n    node_type: str = \"\"\n    ids: dict[str, str] = {}\n    anchors: list[SourceAnchor] = []\n    merged_from: list[str] = []   # identity keys absorbed via dedup/reconciliation\n```\n\n...\n\n## Binding\n### bind_provenance()\nWalks the validated model tree along the same catalog paths the extraction contract used, resolves each entity's node ID through the **same** `NodeIDRegistry` instance the graph converter used (so binding can never disagree on IDs), and annotates each node with a `compact_view`.\nRuns the deterministic verbatim locator against each node's *final* identifier values \u2014 this is what lets grounding survive the dense fill phase refining a skeleton placeholder into a real value. When the identity values don't locate (e.g.\na direct-mode synthesized id that never appears verbatim), the binder falls back to the node's other short, distinctive `str` fields \u2014 a matched description or name grounds the node exactly instead of falling to a coarser tier.\n\n...\n\nReturns bind stats (`nodes_seen`, `bound_verbatim`, `bound_observed`, `bound_document`, `unresolved`) and also writes them to `ledger.bind_stats`."
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling-graph",
+      "title": "GitHub - docling-project/docling-graph: Transform ...",
+      "publish_date": null,
+      "excerpts": [
+        "GitHub - docling-project/docling-graph: Transform ...\nThis transformation enables high-precision use cases in chemistry, finance, and legal domains, where AI must capture exact entity connections (compounds and reactions, instruments and dependencies, properties and measurements) rather than rely on approximate text embeddings."
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling-graph/blob/main/docs/fundamentals/graph-management/provenance.md",
+      "title": "docling-graph/docs/fundamentals/graph-management/provenance ...",
+      "publish_date": null,
+      "excerpts": [
+        "docling-graph/docs/fundamentals/graph-management/provenance ...\nProvenance maps every graph node back to where in the source document its data came from: the chunk (s), the page (s), and (optionally) the exact character span of the identifier that was found."
+      ]
+    },
+    {
+      "url": "https://pypi.org/project/docling-graph",
+      "title": "docling-graph \u00b7 PyPI",
+      "publish_date": null,
+      "excerpts": [
+        "# docling-graph 1.9.1\nA tool to convert documents into knowledge graphs using Docling.\npip install docling-graph Copy PIP instructions\n* Description\n* Download files\n* Release history\n[Docling Graph](https://github.com/docling-project/docling-graph)\n\n...\n\n# Docling Graph\nDocling-Graph turns documents into validated **Pydantic** objects, then builds a **directed knowledge graph** with explicit semantic relationships.\nThis transformation enables high-precision use cases in **chemistry, finance, and legal** domains, where AI must capture exact entity connections (compounds and reactions, instruments and dependencies, properties and measurements) **rather than rely on approximate text embeddings** .\n\n...\n\n## Key Capabilities\n* **\ud83d\udc8e Graphs:** Pydantic to [NetworkX](https://docling-project.github.io/docling-graph/fundamentals/graph-management/graph-conversion/) directed graphs with stable IDs, edge and [provenance](https://docling-project.github.io/docling-graph/fundamentals/graph-management/provenance/) metadata.\n\n...\n\n### Latest Changes\n* **\ud83d\udd17 Graph fusion:** [Merge](https://docling-project.github.io/docling-graph/usage/cli/merge-command/) multiple knowledge graphs into one. Fully audited, deterministic, and no LLM calls.\n\n...\n\n* **\ud83d\udccd Data grounding:** Deterministic [provenance](https://docling-project.github.io/docling-graph/fundamentals/graph-management/provenance/) ledger with bounding-box geometry and no extra LLM calls.\n\n...\n\n## Quick Start\n### Basic Usage\n#### Python API - Default Behavior\nEvery node above also carries a deterministic `__provenance__` attribute by default ( `provenance=\"standard\"` ), pointing back to the source chunk and page it was extracted from \u2014 no extra LLM calls involved.\n\n...\n\n## Pydantic Templates\n```\nfrom pydantic import BaseModel , Field \n from docling_graph.utils import edge \n\n class Person ( BaseModel ): \n \"\"\"Person entity with stable ID.\"\"\" \n    model_config = { \n        'is_entity' : True , \n        'graph_id_fields' : [ 'last_name' , 'date_of_birth' ] \n    } \n    \n```"
+      ]
+    },
+    {
+      "url": "https://github.com/kurhula/docling-project_docling-graph/blob/main/docs/reference/provenance.md",
+      "title": "docling-project_docling-graph/docs/reference/provenance.md at ...",
+      "publish_date": null,
+      "excerpts": [
+        "docling-project_docling-graph/docs/reference/provenance.md at ...\nDeterministic data grounding: maps graph nodes back to their source document chunks and pages. No LLM involvement \u2014 the ledger is built from pipeline bookkeeping and bound to graph nodes after conversion."
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling",
+      "title": "GitHub - docling-project/docling: Get your documents ready for gen AI \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "Get your documents ready for gen AI. Contribute to docling-project/docling development by creating an account on GitHub."
+      ]
+    },
+    {
+      "url": "https://pypi.org/project/docling",
+      "title": "docling \u00b7 PyPI",
+      "publish_date": null,
+      "excerpts": [
+        "docling \u00b7 PyPI\n3. Python usage (recommended) ... More advanced usage and configuration options. Documentation Check out Docling's documentation for details on installation, usage, concepts, recipes, extensions, and more. Examples Go hands-on with our examples, demonstrating how to address different application use cases with Docling. Integrations"
+      ]
+    },
+    {
+      "url": "https://docling-project.github.io/docling-graph",
+      "title": "Docling Graph Documentation",
+      "publish_date": null,
+      "excerpts": [
+        "* Introduction\nIntroduction\n+ Overview\n+ Architecture\n+ Key Concepts\n+ Use Cases\n+ Quick Start\n* Fundamentals\nFundamentals\n+ Overview\n+ Installation\nInstallation\n- Overview\n- Requirements\n- Basic Setup\n- GPU Setup\n- API Keys\n+ Schema Definition\nSchema Definition\n- Overview\n- Template Basics\n- Entities vs Components\n- Field Definitions\n\n...\n\nExtraction Process\n- Overview\n- Document Conversion\n- Chunking Strategies\n- Extraction Backends\n- Dense Extraction\n- Model Merging\n- Batch Processing\n+ Graph Management\nGraph Management\n- Overview\n- Graph Conversion\n- Data Grounding & Provenance\n- Graph Analysis\n- Export Formats\n- Visualization\n- Neo4j Integration\n* Usage\nUsage\n+ Overview\n\n...\n\n# Docling Graph Documentation \u00b6\n## What is Docling Graph? \u00b6\n### Key Features \u00b6\n* **\ud83d\udccd Provenance:** Deterministic source grounding with no extra LLM calls.\n* **\ud83d\udce6 Multiple Exports:** CSV, Cypher, JSON, Markdown, and Neo4j-ready formats.\n* **\ud83d\udcca Visual Reports:** Interactive HTML and Markdown."
+      ]
+    },
+    {
+      "url": "https://docling-project.github.io/docling-graph/examples/scripts/15_provenance_grounding.py",
+      "title": "docling-project.github.io",
+      "publish_date": null,
+      "excerpts": [
+        "docling-project.github.io\nDemonstrates deterministic node-to-source grounding: after extraction, every graph node carries a `__provenance__` attribute pointing back to the source chunk(s) and page(s) it was extracted from. This is fully deterministic (no extra LLM calls) and works with both the \"direct\" and \"dense\" extraction contracts. Use Cases:"
+      ]
+    },
+    {
+      "url": "https://deepwiki.com/docling-project/docling/2.2-doclingdocument-data-model",
+      "title": "DoclingDocument Data Model | docling-project/docling | DeepWiki",
+      "publish_date": null,
+      "excerpts": [
+        "This page detailed the internal schema and data flow for DoclingDocument in Docling, describing how the unified document representation integrates multilayered content, semantic labels, and provenance for AI-ready structured documents."
+      ]
+    }
+  ],
+  "usage": [
+    {
+      "name": "sku_search",
+      "count": 1
+    },
+    {
+      "name": "sku_extract_excerpts",
+      "count": 2
+    }
+  ],
+  "warnings": []
+}

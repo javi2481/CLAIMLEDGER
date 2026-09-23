@@ -1,0 +1,94 @@
+{
+  "search_id": "search_2a7d0ca60937cce4499bf3f7575bfceb",
+  "session_id": "session_2a7d0ca60937cce4499bf3f7575bfceb",
+  "status": "ok",
+  "results": [
+    {
+      "url": "https://docling-project.github.io/docling/integrations/llamaindex/",
+      "title": "Llamaindex - Docling",
+      "publish_date": null,
+      "excerpts": [
+        "Integrations \ud83e\udd16 Agentic / AI dev frameworks Llamaindex Docling is available as an official LlamaIndex extension. To get started, check out the step-by-step guide in LlamaIndex. Components Docling Reader Reads document files and uses Docling to populate LlamaIndex Document objects \u2014 either serializing Docling's data model (losslessly, e.g. as JSON) or exporting to a simplified format"
+      ]
+    },
+    {
+      "url": "https://developers.llamaindex.ai/python/examples/data_connectors/doclingreaderdemo/",
+      "title": "Docling Reader | Developer Documentation",
+      "publish_date": null,
+      "excerpts": [
+        "Docling extracts PDF, DOCX, HTML, and other document formats into a rich representation (incl. layout, tables etc.), which it can export to Markdown or JSON. Docling Reader and Docling Node Parser presented in this notebook seamlessly integrate Docling into LlamaIndex, enabling you to:"
+      ]
+    },
+    {
+      "url": "https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/",
+      "title": "Docling - LlamaIndex",
+      "publish_date": null,
+      "excerpts": [
+        "[Skip to content](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/.readers.docling.DoclingReader)\n[logo](https://developers.llamaindex.ai/ \"LlamaIndex\")\nLlamaIndex\nDocling\nType to start searching\n[logo](https://developers.llamaindex.ai/ \"LlamaIndex\") LlamaIndex\n\n...\n\n+ [Discord](https://developers.llamaindex.ai/python/framework-api-reference/readers/discord/)\n+ Docling [Docling](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/)\nTable of contents\n- [DoclingReader](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/.readers.docling.DoclingReader)\n* [lazy_load_data](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/.readers.docling.DoclingReader.lazy_load_data)\n+ [Docstring walker](https://developers.llamaindex.ai/python/framework-api-reference/readers/docstring_walker/)\n+ [Docugami](https://developers.llamaindex.ai/python/framework-api-reference/readers/docugami/)\n+ [Document360](https://developers.llamaindex.ai/python/framework-api-reference/readers/document360/)\n+ [Earnings call transcript](https://developers.llamaindex.ai/python/framework-api-reference/readers/earnings_call_transcript/)\n\n...\n\nTable of contents\n* [DoclingReader](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/.readers.docling.DoclingReader)\n  + [lazy_load_data](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/.readers.docling.DoclingReader.lazy_load_data)\n\n...\n\n# Docling\n## DoclingReader [#](https://developers.llamaindex.ai/python/framework-api-reference/readers/docling/.readers.docling.DoclingReader \"Permanent link\")\nDocling Reader.\nExtracts PDF, DOCX, and other document formats into LlamaIndex Documents as either Markdown or JSON-serialized Docling native format.\nParameters:\n| Name | Type | Description | Default |\n| `doc_converter` | `DocumentConverter` | The Docling converter to use. Default factory: `DocumentConverter` . | _required_ |\n| `md_export_kwargs` | `Dict [ str , Any ]` | Kwargs to use in case of markdown export. Defaults to `{\"image_placeholder\": \"\"}` . | _required_ |\n| `id_func` |  | (DocIDGenCallable, optional): Doc ID generation function to use. Default: `_uuid4_doc_id_gen` | _required_ |\nSource code in `llama-index-integrations/readers/llama-index-readers-docling/llama_index/readers/docling/base.py`\n\n...\n\nclass DoclingReader ( BasePydanticReader ): \"\"\"     Docling Reader.\nExtracts PDF, DOCX, and other document formats into LlamaIndex Documents as either Markdown or JSON-serialized Docling native format.\nArgs:         export_type (Literal[\"markdown\", \"json\"], optional): The type to export to. Defaults to \"markdown\". doc_converter (DocumentConverter, optional): The Docling converter to use.\nDefault factory: `DocumentConverter`. md_export_kwargs (Dict[str, Any], optional): Kwargs to use in case of markdown export. Defaults to `{\"image_placeholder\": \"\"}`.\nid_func: (DocIDGenCallable, optional): Doc ID generation function to use.\nDefault: `_uuid4_doc_id_gen`     \"\"\" class ExportType ( str , Enum ): MARKDOWN = \"markdown\" JSON = \"json\" @runtime_checkable class DocIDGenCallable ( Protocol ): def __call__ ( self , doc :\nDLDocument , file_path : str | Path ) -> str : ... @staticmethod def _uuid4_doc_id_gen ( doc : DLDocument , file_path : str | Path ) -> str : return str ( uuid .\nuuid4 ()) export_type : ExportType = ExportType .\nMARKDOWN doc_converter : DocumentConverter = Field ( default_factory = DocumentConverter ) md_export_kwargs : Dict [ str , Any ] = { \"image_placeholder\" : \"\" } id_func : DocIDGenCallable =\n_uuid4_doc_id_gen def lazy_load_data ( self , file_path : str | Path | Iterable [ str ] | Iterable [ Path ], extra_info : dict | None = None , fs : Optional [ AbstractFileSystem ] = None , ) ->\nIterable [ LIDocument ]: \"\"\"         Lazily load from given source.\n\n...\n\n(dict | None, optional): Any pre-existing metadata to include. Defaults to None. Returns:             Iterable[LIDocument]: Iterable over the created LlamaIndex documents.\n\n...\n\n```\nment]: Iterable over the created LlamaIndex documents. |\n\nSource code in `llama-index-integrations/readers/llama-index-readers-docling/llama_index/readers/docling/base.py`\n\n|```\n46 \n 47 \n```"
+      ]
+    },
+    {
+      "url": "https://docling-project.github.io/docling/_generated/examples/rag_llamaindex/",
+      "title": "RAG with LlamaIndex - Docling",
+      "publish_date": null,
+      "excerpts": [
+        "This example leverages the official LlamaIndex Docling extension. Presented extensions DoclingReader and DoclingNodeParser enable you to: - use various document types in your LLM applications with ease and speed, and - leverage Docling's rich format for advanced, document-native grounding."
+      ]
+    },
+    {
+      "url": "https://anpigon.github.io/docling/integrations/llamaindex/",
+      "title": "LlamaIndex - Docling",
+      "publish_date": null,
+      "excerpts": [
+        "LlamaIndex Docling is available as an official LlamaIndex extension. To get started, check out the step-by-step guide in LlamaIndex. Components Docling Reader Reads document files and uses Docling to populate LlamaIndex Document objects \u2014 either serializing Docling's data model (losslessly, e.g. as JSON) or exporting to a simplified format (lossily, e.g. as Markdown). \ud83d\udcbb Docling Reader"
+      ]
+    },
+    {
+      "url": "https://colab.research.google.com/github/docling-project/docling/blob/main/docs/examples/rag_llamaindex.ipynb",
+      "title": "rag_llamaindex.ipynb - Colab",
+      "publish_date": null,
+      "excerpts": [
+        "# RAG with LlamaIndex\n## Overview\nspark Gemini\nThis example leverages the official [LlamaIndex Docling extension](https://github.com/docling-project/docling/blob/main/integrations/llamaindex/) . Presented extensions `DoclingReader` and `DoclingNodeParser` enable you to: * use various document types in your LLM applications with ease and speed, and\n* leverage Docling's rich format for advanced, document-native grounding.\nspark Gemini\nkeyboard_arrow_down\n\n...\n\n## Using Markdown export\nspark Gemini\nTo create a simple RAG pipeline, we can: * define a `DoclingReader` , which by default exports to Markdown, and\n* use a standard node parser for these Markdown-based docs, e.g. a `MarkdownNodeParser`\nspark Gemini\n\n...\n\n## Using Docling format\nspark Gemini\nTo leverage Docling's rich native format, we: * create a `DoclingReader` with JSON export type, and\n* employ a `DoclingNodeParser` in order to appropriately parse that Docling format.\n  Notice how the sources now also contain document-level grounding (e.g. page number or bounding box information):\nspark Gemini\nfrom \u00a0llama_index.node_parser.docling\u00a0 import \u00a0DoclingNodeParser\nreader\u00a0=\u00a0DoclingReader(export_type=DoclingReader.E xportType.JSON)\nnode_parser\u00a0=\u00a0DoclingNodeParser()"
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling/blob/main/docs/integrations/llamaindex.md",
+      "title": "docling/docs/integrations/llamaindex.md at main \u00b7 docling ...",
+      "publish_date": null,
+      "excerpts": [
+        "Docling is available as an official LlamaIndex extension. To get started, check out the step-by-step guide in LlamaIndex."
+      ]
+    },
+    {
+      "url": "https://market.lobehub.com/s/skills/enuno-claude-command-and-control-docling",
+      "title": "docling",
+      "publish_date": null,
+      "excerpts": [
+        "... documents, code-block detection, mathematical formula parsing, VLM and ASR integration, and lossless JSON output. Docling provides official LangChain and LlamaIndex integrations plus an MCP server for agentic and RAG applications. Use it to build"
+      ]
+    },
+    {
+      "url": "https://github.com/jeff-0717/pdf-to-markdown/blob/main/docs/integrations/llamaindex.md",
+      "title": "pdf-to-markdown/docs/integrations/llamaindex.md at main \u00b7 jeff-0717/pdf-to-markdown \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "... ://github.com/jeff-0717/pdf-to-markdown/blob/main/docs/integrations/llamaindex.md\n- Repository: jeff-0717/pdf-to-markdown\n- Path: docs/integrations/llamaindex.md\n- Ref: main\n- Lines: 21\n\n---\n\nDocling is available as an official [LlamaIndex](https"
+      ]
+    },
+    {
+      "url": "https://github.com/docling-project/docling/discussions/109",
+      "title": "question to RAG with LLama Index example \u00b7 docling-project/docling \u00b7 Discussion #109 \u00b7 GitHub",
+      "publish_date": "2024-09-26",
+      "excerpts": [
+        "... readme-ov-file#chunking) ).\n\n**vagenas** commented on 2024-10-09T18:55:39Z:\n\n> We have meanwhile published Docling as an official LlamaIndex integration, check it out [here](https://docs.llamaindex.ai/en/stable/examples/data_connectors/DoclingRea"
+      ]
+    }
+  ],
+  "usage": [
+    {
+      "name": "sku_search",
+      "count": 1
+    }
+  ],
+  "warnings": []
+}

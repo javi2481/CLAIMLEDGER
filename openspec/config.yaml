@@ -1,0 +1,73 @@
+schema: spec-driven
+project: claimledger
+persistence: hybrid
+strict_tdd: true
+
+context: |
+  CLAIMLEDGER: verified financial claims ledger. Architecture CLOSED (docs/documento-rector.md).
+  Repo is docs-only: no src/, tests/, pyproject.toml, CI, or git.
+  Planned: Python >=3.11 + pytest. Pins (declare, do not import in Fase 0 tests): docling==2.130.0, docling-graph==1.9.1.
+  Kernel is deterministic; no LLM stage for identity. No agent may skip the kernel.
+  Retrieval later: DoclingReader(export_type="json"). Never MinerU. Architecture Gate before new components.
+  User-facing docs: Spanish. OpenSpec/SDD artifacts: English.
+  Strict TDD requested; pytest planned, not detected.
+
+testing:
+  runner:
+    detected: false
+    planned: pytest
+    command: pytest
+  layers:
+    unit: planned (pytest; in-memory kernel; no network, no PDF, no docling import)
+    integration: not_detected
+    e2e: not_detected
+  coverage:
+    detected: false
+    command: null
+  quality:
+    linter: not_detected
+    type_checker: not_detected
+    formatter: not_detected
+  constraints:
+    - Kernel tests MUST NOT import docling
+    - Gold identity_v1 (45) + identity_v2 (26) are regression contracts; numeric expected values are frozen
+    - Fase 0 has no Docker, Graph, LlamaIndex, Open WebUI, VLM, or HTTP API
+
+rules:
+  proposal:
+    - Architecture is CLOSED. Do not invent new product architecture.
+    - Canonical source: docs/documento-rector.md. Filter: docs/north-star.md. Fase 0 contract: docs/fase-0.md.
+    - Include a rollback plan for risky changes.
+    - User-facing docs stay Spanish; this change artifact is English.
+  specs:
+    - Use Given/When/Then for scenarios.
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY).
+    - Do not relax gold numeric expected values.
+    - Kernel specs MUST forbid docling imports in tests.
+  design:
+    - Do not invent layers, agents, or stack substitutions.
+    - Architecture Gate: a new component is allowed only if it solves a concrete problem the current design cannot.
+    - Sequence diagrams only for flows already in the rector.
+    - Document decisions with rationale; never MinerU; never Markdown as retrieval SoT.
+  tasks:
+    - Group by phase; use hierarchical numbering.
+    - Keep tasks completable in one session.
+    - Forecast the 400-line PR review budget before apply.
+    - Fase 0 task order follows docs/fase-0.md commit order.
+  apply:
+    guidelines:
+      - Follow existing docs/contracts; do not rewrite the rector.
+      - RED-GREEN-REFACTOR. Write a failing test before production code.
+      - Do not start Fase 0 product code unless the change is explicitly the Fase 0 kernel.
+    tdd: true
+    test_command: pytest
+  verify:
+    test_command: pytest
+    build_command: ""
+    coverage_threshold: 0
+    extra:
+      - pytest is planned, not installed until pyproject.toml exists
+      - Kernel test suite MUST stay import-docling-free
+  archive:
+    - Warn before merging destructive deltas
+    - Keep rector and north-star as user-facing Spanish sources of truth

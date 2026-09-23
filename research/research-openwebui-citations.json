@@ -1,0 +1,62 @@
+{
+  "search_id": "search_288ec5a7ec9a93daafa233d8c7df734e",
+  "session_id": "session_288ec5a7ec9a93daafa233d8c7df734e",
+  "status": "ok",
+  "results": [
+    {
+      "url": "https://github.com/open-webui/open-webui/discussions/3326",
+      "title": "RAG : display document source in the citation (feature) - GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "Possible UX enhancement we could make here would be when a category tag is selected here we have it automatically add the underlying individual documents, and display them in multiple rows if overflowing?"
+      ]
+    },
+    {
+      "url": "https://docs.openwebui.com/features/chat-conversations/rag/",
+      "title": "Retrieval Augmented Generation (RAG) / Open WebUI",
+      "publish_date": null,
+      "excerpts": [
+        "Retrieval Augmented Generation (RAG) is a technique that enhances the conversational capabilities of chatbots by incorporating context from diverse sources. It works by retrieving relevant information from a wide range of sources such as local and remote documents, web content, and even multimedia sources like YouTube videos."
+      ]
+    },
+    {
+      "url": "https://github.com/open-webui/open-webui/discussions/16727",
+      "title": "How to display URLs from JSON files as sources instead of ...",
+      "publish_date": null,
+      "excerpts": [
+        "My question: Is there a way to also show (or replace with) the source field from the JSON, so that the original URL is displayed in the citation? I\u2019d like to make the most of the existing Open WebUI features without changing the source code if possible. Maybe I\u2019m missing a setting or a way to map metadata?"
+      ]
+    },
+    {
+      "url": "https://github.com/mplogas/open-webui",
+      "title": "GitHub - mplogas/open-webui: Collection of Open WebUI tools, functions and prompts \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# Collection Open WebUI Tools\n## Web Content Extractor\n### Features\n* **Markdown output** : LLMs love *.md\n* **Automatic citations** : Includes source URL, title, author, date metadata\n* **Configurable** : User controls extraction method, link inclusion, metadata display\n\n...\n\n## Paperless-ngx Integration\n### Exposed Tool capabilities\n1. **`search_documents`** - General full-text search\n2. **`search_by_tags`** - Filter by tags (any or all)\n3. **`search_by_type_and_tags`** - Filter by document type + tags\n4. **`search_by_correspondent`** - Filter by sender/source\n5. **`list_all_tags`** - See available tags\n6.\n\n...\n\n### Features\n* **Natural language search** : Resolves tag/type/correspondent names to IDs automatically\n* **Full content extraction** : Retrieves complete document text for further analysis\n* **Smart filtering** : Combine multiple criteria (type + tags + correspondent + dates)\n* **Automatic citations** : Creates proper references with metadata\n\n...\n\n### Usage\n```\n\"What document types do I have?\"\n\"List all my correspondents\"\n\"Show me all available tags\"\n```\n\n...\n\n## GitHub Reader\n### Features\n* **Filtering** : Filter workflow runs by status, branch, or specific workflow\n* **Automatic citations** : Links back to source files and gists on GitHub"
+      ]
+    },
+    {
+      "url": "https://github.com/owndev/Open-WebUI-Functions/issues/100",
+      "title": "Support native OpenWebUI citations and events in azure_ai_foundry.py pipeline \u00b7 Issue #100 \u00b7 owndev/Open-WebUI-Functions \u00b7 GitHub",
+      "publish_date": "2025-11-23",
+      "excerpts": [
+        "# Support native OpenWebUI citations and events in azure_ai_foundry.py pipeline\n## Labels\n### Feature overview\nCurrent Azure AI Search citation integration only provides markdown/HTML citation sections, but does not emit structured events or fields that OpenWebUI can use for native citation cards and UI.\nThe proposal is to emit native OpenWebUI citation events and provide a response[\"openwebui_citations\"] field, so the frontend can consume these to display source cards and previews, correlate inline tokens, and provide an improved UX.\n\n...\n\nTarget users: OpenWebUI users leveraging Azure AI Search / RAG with source/citation support.\nBenefit: Enables full citation experience (cards, click sources, preview) instead of plain markdown.\n\n...\n\n### Implementation details\n- Add config to enable structured citation output (AZURE_AI_OPENWEBUI_CITATIONS, default: true).\n- For streaming: In stream_processor_with_citations, as soon as citations are detected in SSE or in delta.context/message.context, normalize and emit native event dicts matching OpenWebUI's documented shape. Example:\n```python\n# yield a readable event dict for the generator-style pipelines\nyield {\n    \"event\": {\n        \"type\": \"citation\",\n        \"data\": {\n            \"document\": [citation.get('content',\"\")],\n            \"metadata\": [citation.get('metadata', {})],\n            \"source\": {\n```\n\n...\n\n- For non-streaming: Attach normalized citations list to response[\"openwebui_citations\"], e.g.:\n```json\n{\n  \"id\": \"doc1\",\n  \"token\": \"doc1\",\n  \"title\": \"Document title or filepath or url\",\n  \"url\": \"https://...\",\n  \"filepath\": \"/path/to/file\",\n  \"preview\": \"Snippet or content\",\n  \"chunk_id\": \"...\",\n  \"metadata\": { ... },\n  \"score\": 0.123\n}\n```\n\n...\n\n- Add helpers: _extract_citations_from_response, _normalize_citation_for_openwebui, _emit_openwebui_citation_events.\n- Patch stream_processor_with_citations to emit citation events as soon as citation data is seen (emit via __event_emitter__ if available and/or yield event dicts for generator-style).\n\n...\n\n### Questions or areas for feedback\n- Is __event_emitter__ preferred (server push) or direct yield (generator-style) for streaming SSE events? (Both can be supported.)\n- Should we emit both structured events and keep markdown fallback by default, or make structured output exclusive when enabled?"
+      ]
+    },
+    {
+      "url": "https://github.com/open-webui/open-webui/blob/main/backend/open_webui/utils/middleware.py",
+      "title": "open-webui/backend/open_webui/utils/middleware.py at main \u00b7 open-webui/open-webui \u00b7 GitHub",
+      "publish_date": null,
+      "excerpts": [
+        "# open-webui/open-webui \u2014 backend/open_webui/utils/middleware.py\n```py\n        EVENTS.CHAT_FINISHED,\n        actor=user,\n        subject_id=chat_id,\n        subject_type='chat',\n        data={\n            'user_id': user.id,\n            'chat_id': chat_id,\n            'message_id': metadata.get('message_id'),\n            'model_id': metadata.get('model_id'),\n            'title': title,\n            'url': f'{webui_url}/c/{chat_id}' if webui_url else f'/c/{chat_id}',\n            'message': content,\n        },\n        message=title or 'Chat finished',\n    )\n```\n\n...\n\n```py\n    page = tool_result.get('page') or tool_function_params.get('page')\n\n    return {\n        **tool_result,\n        'type': 'file',\n        'source': 'open_terminal',\n        **({'displayed': True} if tool_function_params.get('inline') is True else {}),\n```\n\n...\n\n```py\n    return expanded\n\ndef get_citation_source_from_tool_result(\n    tool_name: str, tool_params: dict, tool_result: str, tool_id: str = ''\n) -> list[dict]:\n    \"\"\"\n    Parse a tool's result and convert it to source dicts for citation display.\n\n    Follows the source format conventions from get_sources_from_items:\n    - source: file/item info object with id, name, type\n    - document: list of document contents\n    - metadata: list of metadata objects with source, file_id, name fields\n\n    Returns a list of sources (usually one, but query_knowledge_files/query_chat_files may return multiple).\n    \"\"\"\n    _EXPECTS_LIST = {'search_web', 'query_knowledge_files', 'query_chat_files'}\n    _EXPECTS_DICT = {'view_knowledge_file', 'view_file'}\n\n    try:\n```\n\n...\n\n```py\n\n            # Group chunks by source for better citation display\n            # Each unique source becomes a separate source entry\n            sources_by_file = {}\n\n            for chunk in chunks:\n                source_name = chunk.get('source', 'Unknown')\n```\n\n...\n\n```py\n        return current_output, None\n\ndef get_source_context(sources: list, source_ids: dict = None, include_content: bool = True) -> str:\n    \"\"\"\n    Build <source> tag context string from citation sources.\n    \"\"\"\n    context_string = ''\n    if source_ids is None:\n        source_ids = {}\n    for source in sources:\n        for doc, meta in zip(source.get('document', []), source.get('metadata', [])):\n            source_id = meta.get('source') or source.get('source', {}).get('id') or 'N/A'\n```\n\n...\n\n```py\n    request: Request,\n    messages: list,\n    sources: list,\n    user_message: str,\n    include_content: bool = True,\n) -> list:\n    \"\"\"\n    Build source context from citation sources and apply to messages.\n```\n\n...\n\n```py\n                    tool_name = f'{tool_id}/{tool_function_name}' if tool_id else f'{tool_function_name}'\n\n                    # Citation is enabled for this tool\n                    sources.append(\n                        {\n                            'source': {\n```\n\n...\n\n```py\n    chat = await Chats.get_chat_by_id_and_user_id(chat_id, user.id)\n    if not chat:\n        return messages\n\n    history = chat.chat.get('history', {})\n    stored_messages = get_message_list(history.get('messages', {}), history.get('currentId'))\n\n```\n\n...\n\n```py\n                continue\n\n            documents = source.get('document') or []\n            metadatas = source.get('metadata') or []\n            src_info = source.get('source') or {}\n\n            for index, _ in enumerate(documents):\n```\n\n...\n\n```py\n        form_data['messages'] = await apply_source_context_to_messages(request, form_data['messages'], sources, prompt)\n\n    # If there are citations, add them to the data_items\n    sources = [\n        source\n        for source in sources\n```\n\n...\n\n```py\n                                    # Emit citation sources from finalized output items\n                                    # (mirrors Chat Completions annotation handling at delta level)\n```\n\n...\n\n```py\n                all_tool_call_sources = []  # Accumulated sources across all iterations\n                user_message = get_last_user_message(form_data['messages'])\n\n                # Check if citations are enabled for this model\n```\n\n...\n\n```py\n                                item['arguments'] = tc.get('function', {}).get('arguments', '{}')\n                                break\n\n                    # Emit citation sources to the frontend for display\n                    if citations_enabled:\n```\n\n...\n\n```py\n                            else:\n                                replace_system_message_content('', form_data['messages'])\n\n                            # Build context: file sources with content,\n                            # tool sources as citation markers only.\n```\n\n...\n\n```py\n                            # tool messages.  Extract images into a user message.\n                            image_urls = []\n                            for message in tool_messages:\n                                if message.get('role') == 'tool' and isinstance(message.get('content'), list):\n                                    text_parts = []\n                                    for part in message['content']:\n```\n\n...\n\n```py\n                            # Responses API output_index values are relative\n                            # to the current response \u2014 a clean output list\n                            # keeps indices aligned. The display prefix\n```\n\n...\n\n```py\n                        pass\n\n                async def save_cancelled_state():\n                    await event_emitter({'type': 'chat:tasks:cancel'})\n                    if save_to_chat:\n                        await Chats.upsert_message_to_chat_by_id_and_message_id(\n```"
+      ]
+    }
+  ],
+  "usage": [
+    {
+      "name": "sku_search",
+      "count": 1
+    }
+  ],
+  "warnings": []
+}
