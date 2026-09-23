@@ -48,8 +48,8 @@ Chain strategy: pending
 
 ## Phase 4: Ledger upsert (commit 4)
 
-- [ ] 4.1 RED: `tests/test_ledger.py` recorded/append; other `22362983` conflicted both kept; 14-row seed; prior not current; ingest≠verified.
-- [ ] 4.2 GREEN: `ledger.py` thin `dict[str, FinancialClaim]`; no `store.py`; in-module seed.
+- [x] 4.1 RED: `tests/test_ledger.py` recorded/append; other `22362983` conflicted both kept; 14-row seed; prior not current; ingest≠verified.
+- [x] 4.2 GREEN: `ledger.py` thin `dict[str, FinancialClaim]`; no `store.py`; in-module seed.
 
 ## Phase 5: Lookup (commit 5)
 
