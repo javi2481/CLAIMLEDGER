@@ -68,7 +68,7 @@ Chain strategy: pending
 
 ## Phase 8: Gold v2 (commit 8)
 
-- [ ] 8.1 RED: `tests/test_gold_v2.py` `v2-id-04`=`-14950948`; `v2-cp-*` no delta; no press/deck gold.
-- [ ] 8.2 GREEN: port `evals/identity_v2.json` (26); alias-only IDs.
+- [x] 8.1 RED: `tests/test_gold_v2.py` `v2-id-04`=`-14950948`; `v2-cp-*` no delta; no press/deck gold.
+- [x] 8.2 GREEN: port `evals/identity_v2.json` (26); alias-only IDs.
 
 Threat matrix N/A. Split Phase 5 if >400.

@@ -1,0 +1,377 @@
+{
+  "version": "identity_v2",
+  "gold_ref": "recipes/financial_statement.json",
+  "notes": "Neighbor P&L rows. Numeric gold matches the finance recipe. Do not merge with docs/hechos_eeff.json. identity_v1 remains the neto/controlante regression.",
+  "cases": [
+    {
+      "id": "v2-id-01",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el resultado bruto del 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|gross_profit",
+      "expected_value": "60144176",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO BRUTO",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-02",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el resultado operativo del 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|operating_income",
+      "expected_value": "70223471",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO OPERATIVO",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-03",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Resultado antes del impuesto a las ganancias 1T26",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|income_before_tax",
+      "expected_value": "36213283",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "ANTES DEL IMPUESTO",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-04",
+      "partition": "identity",
+      "route": "identity",
+      "question": "¿Cuál es el impuesto a las ganancias del 1T26?",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|income_tax",
+      "expected_value": "-14950948",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "Impuesto a las ganancias",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-05",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Resultado atribuible a la participación no controlante 1T26",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|nci_income",
+      "expected_value": "2566",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "no controlante",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-06",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Resultado bruto 2T26",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|gross_profit",
+      "expected_value": "122610546",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO BRUTO",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-07",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Resultado operativo al 30 de junio de 2026",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|operating_income",
+      "expected_value": "143236114",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO OPERATIVO",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-id-08",
+      "partition": "identity",
+      "route": "identity",
+      "question": "Impuesto a las ganancias 2T26",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|income_tax",
+      "expected_value": "-32731536",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "Impuesto a las ganancias",
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-01",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "RESULTADO BRUTO 1T26, no el operativo ni el neto",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|gross_profit",
+      "expected_value": "60144176",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO BRUTO",
+      "reject_values": [
+        "70223471",
+        "21262335"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-02",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado operativo 1T26, no el bruto",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|operating_income",
+      "expected_value": "70223471",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO OPERATIVO",
+      "reject_values": [
+        "60144176",
+        "21262335"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-03",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado antes del impuesto 1T26, no el neto del período",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|income_before_tax",
+      "expected_value": "36213283",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "ANTES DEL IMPUESTO",
+      "reject_values": [
+        "21262335",
+        "-14950948"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-04",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Impuesto a las ganancias 1T26, no el resultado neto",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|income_tax",
+      "expected_value": "-14950948",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "Impuesto a las ganancias",
+      "reject_values": [
+        "21262335",
+        "36213283"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-05",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Participación no controlante 1T26, no la controlante ni el neto",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|nci_income",
+      "expected_value": "2566",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "no controlante",
+      "reject_values": [
+        "21259769",
+        "21262335"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-06",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado bruto 2T26, no la columna de tres meses",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|gross_profit",
+      "expected_value": "122610546",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO BRUTO",
+      "reject_values": [
+        "58533038",
+        "99993205"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-07",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado operativo 2T26, no 68.397.459",
+      "expected_identity": "BYMA|2026-06-30|income_statement|consolidated|operating_income",
+      "expected_value": "143236114",
+      "expected_period": "2026-06-30",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO OPERATIVO",
+      "reject_values": [
+        "68397459",
+        "81956525"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-nb-08",
+      "partition": "neighbor",
+      "route": "identity",
+      "question": "Resultado neto del período 1T26, no el bruto ni el operativo",
+      "expected_identity": "BYMA|2026-03-31|income_statement|consolidated|net_income",
+      "expected_value": "21262335",
+      "expected_period": "2026-03-31",
+      "expected_source_page": 4,
+      "expected_provenance": "RESULTADO NETO DEL PERÍODO",
+      "reject_values": [
+        "60144176",
+        "70223471"
+      ],
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-cp-01",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Comparar resultado bruto 1T26 vs 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|gross_profit",
+      "expected_values": [
+        "60144176",
+        "122610546"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-cp-02",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Comparar resultado operativo 1T26 versus 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|operating_income",
+      "expected_values": [
+        "70223471",
+        "143236114"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-cp-03",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Diferencia del resultado antes del impuesto entre marzo y junio 2026",
+      "expected_identity": "BYMA|*|income_statement|consolidated|income_before_tax",
+      "expected_values": [
+        "36213283",
+        "114688061"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-cp-04",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Comparar impuesto a las ganancias 1T26 vs 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|income_tax",
+      "expected_values": [
+        "-14950948",
+        "-32731536"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-cp-05",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Participación no controlante 1T26 vs 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|nci_income",
+      "expected_values": [
+        "2566",
+        "9532"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-cp-06",
+      "partition": "comparison",
+      "route": "identity",
+      "question": "Compará el resultado bruto de ambos trimestres 1T26 y 2T26",
+      "expected_identity": "BYMA|*|income_statement|consolidated|gross_profit",
+      "expected_values": [
+        "60144176",
+        "122610546"
+      ],
+      "expected_periods": [
+        "2026-03-31",
+        "2026-06-30"
+      ],
+      "expected_source_page": 4,
+      "expected_abstain": null
+    },
+    {
+      "id": "v2-ab-01",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Cuál fue el precio de cierre de YPF en BYMA el 3 de enero?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "v2-ab-02",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Cuál es el resultado bruto en la memoria anual?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "v2-ab-03",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Cuál es el impuesto a las ganancias del comunicado de prensa?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    },
+    {
+      "id": "v2-ab-04",
+      "partition": "abstention",
+      "route": "abstain",
+      "question": "¿Qué dice la cláusula 5 del contrato?",
+      "expected_identity": null,
+      "expected_value": null,
+      "expected_period": null,
+      "expected_source_page": null,
+      "expected_abstain": true
+    }
+  ]
+}
