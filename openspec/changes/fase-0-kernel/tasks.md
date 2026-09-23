@@ -58,8 +58,8 @@ Chain strategy: pending
 
 ## Phase 6: Query (commit 6)
 
-- [ ] 6.1 RED: `tests/test_query.py` `21262335`/`21259769`; compare 2 claims no delta; closed abstentions; no mutate; no `rejected`.
-- [ ] 6.2 GREEN: `query.py` `QueryResult` `{verified,abstained}`; read-only `Ledger.get`.
+- [x] 6.1 RED: `tests/test_query.py` `21262335`/`21259769`; compare 2 claims no delta; closed abstentions; no mutate; no `rejected`.
+- [x] 6.2 GREEN: `query.py` `QueryResult` `{verified,abstained}`; read-only `Ledger.get`.
 
 ## Phase 7: Gold v1 (commit 7)
 
