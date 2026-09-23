@@ -1,4 +1,4 @@
-"""Fase 0 kernel identity tests. Slice 1 pins; slice 2 key/fold/period/digits/aliases."""
+"""Fase 0 kernel identity tests. Slices 1–2 identity; slice 3 claim/evidence."""
 
 from __future__ import annotations
 
@@ -10,7 +10,9 @@ from pathlib import Path
 
 import pytest
 
+from claimledger.claim import ClaimError, FinancialClaim, validate_claim
 from claimledger.digits import digits_ars, signed_ars
+from claimledger.evidence import EvidenceError, FinancialEvidence, validate_evidence
 from claimledger.identity import apply_alias, fold, identity_key, normalize_period
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
@@ -227,3 +229,133 @@ def test_apply_alias_controlante_is_parent_neighbor() -> None:
     )
     key = identity_key("BYMA", "2026-03-31", statement, scope, metric)
     assert key == CANONICAL_PARENT
+
+
+def _evidence(**overrides: object) -> FinancialEvidence:
+    fields = {
+        "document_id": "byma-eeff-1t26",
+        "artifact_hash": "",
+        "page": 4,
+        "text": "RESULTADO NETO DEL PERÍODO",
+        "label": "net_income",
+        "bbox": None,
+    }
+    fields.update(overrides)
+    return FinancialEvidence(**fields)  # type: ignore[arg-type]
+
+
+def _claim(**overrides: object) -> FinancialClaim:
+    fields = {
+        "identity_key": CANONICAL_CONSOLIDATED,
+        "issuer": "BYMA",
+        "period": "2026-03-31",
+        "statement": "income_statement",
+        "scope": "consolidated",
+        "metric": "net_income",
+        "value": "21262335",
+        "currency": "ARS",
+        "unit": None,
+        "evidence": (),
+        "ledger_status": "recorded",
+    }
+    fields.update(overrides)
+    return FinancialClaim(**fields)  # type: ignore[arg-type]
+
+
+def test_claim_consistent_key_constructs() -> None:
+    claim = _claim()
+    assert claim.identity_key == CANONICAL_CONSOLIDATED
+    assert claim.issuer == "BYMA"
+    assert claim.period == "2026-03-31"
+    assert claim.statement == "income_statement"
+    assert claim.scope == "consolidated"
+    assert claim.metric == "net_income"
+    assert claim.value == "21262335"
+    assert claim.currency == "ARS"
+    assert claim.unit is None
+    assert claim.ledger_status == "recorded"
+    validate_claim(claim)
+
+
+def test_claim_parent_neighbor_is_distinct_identity() -> None:
+    claim = _claim(
+        identity_key=CANONICAL_PARENT,
+        scope="parent_attributable",
+        value="21259769",
+    )
+    assert claim.identity_key == CANONICAL_PARENT
+    assert claim.identity_key != CANONICAL_CONSOLIDATED
+    assert claim.value == "21259769"
+    assert "21262335" not in claim.identity_key
+
+
+def test_claim_inconsistent_key_is_rejected() -> None:
+    with pytest.raises(ClaimError, match="identity_key"):
+        _claim(identity_key=CANONICAL_PARENT)
+    with pytest.raises(ClaimError, match="identity_key"):
+        _claim(identity_key="OTHER|2026-03-31|income_statement|consolidated|net_income")
+
+
+def test_claim_has_no_verification_status() -> None:
+    claim = _claim()
+    assert not hasattr(claim, "verification_status")
+    assert "verification_status" not in claim.__dataclass_fields__
+    conflicted = _claim(ledger_status="conflicted")
+    assert conflicted.ledger_status == "conflicted"
+    assert not hasattr(conflicted, "verification_status")
+    with pytest.raises(ClaimError, match="ledger_status"):
+        _claim(ledger_status="verified")
+
+
+def test_claim_rejects_compact_millions_value() -> None:
+    with pytest.raises(ClaimError, match="value"):
+        _claim(value="21,26 M")
+    with pytest.raises(ClaimError, match="value"):
+        _claim(value="8,19 M")
+    signed = _claim(
+        identity_key="BYMA|2026-03-31|income_statement|consolidated|income_tax",
+        metric="income_tax",
+        value="-14950948",
+    )
+    assert signed.value == "-14950948"
+
+
+def test_claim_unit_ars_or_null() -> None:
+    with_unit = _claim(unit="ARS")
+    assert with_unit.unit == "ARS"
+    with pytest.raises(ClaimError, match="unit"):
+        _claim(unit="USD")
+    with pytest.raises(ClaimError, match="currency"):
+        _claim(currency="USD")
+
+
+def test_evidence_empty_hash_and_bbox_allowed() -> None:
+    evidence = _evidence()
+    assert evidence.artifact_hash == ""
+    assert evidence.bbox is None
+    assert evidence.page == 4
+    validate_evidence(evidence)
+
+
+def test_evidence_good_bbox_constructs() -> None:
+    evidence = _evidence(bbox=(0.1, 0.2, 0.3, 0.4))
+    assert evidence.bbox == (0.1, 0.2, 0.3, 0.4)
+    point = _evidence(bbox=(0.5, 0.5, 0.5, 0.5))
+    assert point.bbox == (0.5, 0.5, 0.5, 0.5)
+
+
+def test_evidence_invalid_bbox_is_rejected() -> None:
+    with pytest.raises(EvidenceError, match="bbox"):
+        _evidence(bbox=(1.5, 0.0, 1.6, 0.1))
+    with pytest.raises(EvidenceError, match="bbox"):
+        _evidence(bbox=(0.8, 0.1, 0.2, 0.3))
+    with pytest.raises(EvidenceError, match="bbox"):
+        _evidence(bbox=(0.1, 0.8, 0.2, 0.3))
+
+
+def test_claim_keeps_evidence_tuple() -> None:
+    evidence = _evidence(bbox=(0.0, 0.0, 1.0, 1.0))
+    claim = _claim(evidence=(evidence,))
+    assert len(claim.evidence) == 1
+    assert claim.evidence[0].document_id == "byma-eeff-1t26"
+    assert claim.evidence[0].text == "RESULTADO NETO DEL PERÍODO"

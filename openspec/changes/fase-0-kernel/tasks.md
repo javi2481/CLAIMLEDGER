@@ -43,8 +43,8 @@ Chain strategy: pending
 
 ## Phase 3: Claim + evidence (commit 3)
 
-- [ ] 3.1 RED: `tests/test_identity.py` consistent/inconsistent key; no `verification_status`; bad bbox; reject `21,26 M`.
-- [ ] 3.2 GREEN: `claim.py` + `evidence.py` frozen + `validate_*`; `ledger_status` only.
+- [x] 3.1 RED: `tests/test_identity.py` consistent/inconsistent key; no `verification_status`; bad bbox; reject `21,26 M`.
+- [x] 3.2 GREEN: `claim.py` + `evidence.py` frozen + `validate_*`; `ledger_status` only.
 
 ## Phase 4: Ledger upsert (commit 4)
 
