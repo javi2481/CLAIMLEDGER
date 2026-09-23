@@ -33,8 +33,8 @@ Chain strategy: pending
 
 ## Phase 1: Skeleton (commit 1)
 
-- [ ] 1.1 RED: `tests/test_identity.py` import 7 empty modules; pins unused; no `docling`.
-- [ ] 1.2 GREEN: `pyproject.toml` >=3.11, pytest, pin metadata + empty `src/claimledger/{__init__,identity,digits,evidence,claim,ledger,lookup,query}.py`.
+- [x] 1.1 RED: `tests/test_identity.py` import 7 empty modules; pins unused; no `docling`.
+- [x] 1.2 GREEN: `pyproject.toml` >=3.11, pytest, pin metadata + empty `src/claimledger/{__init__,identity,digits,evidence,claim,ledger,lookup,query}.py`.
 
 ## Phase 2: Identity + digits (commit 2)
 
