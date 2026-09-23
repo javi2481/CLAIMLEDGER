@@ -29,4 +29,4 @@ Never: MinerU, Markdown as retrieval source of truth, LLM-written `identity_v1`/
 
 `sdd-explore` → `sdd-propose` → `sdd-spec` → `sdd-design` → `sdd-tasks` → `sdd-apply` → `sdd-verify` → `sdd-archive`.
 
-Active change: `openspec/changes/fase-0-kernel/`.
+Active change: none. Archived: `openspec/changes/archive/2026-09-23-fase-0-kernel/`. Next: `fase-1-docling-adapter`.
