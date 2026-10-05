@@ -2,11 +2,12 @@
 
 from __future__ import annotations
 
+import copy
 import hashlib
 import json
 from pathlib import Path
 
-from claimledger.ingest.parse import convert_pdf
+from claimledger.ingest.parse import convert_pdf, doclang_from_payload
 from claimledger.ingest.types import IngestError, StoredDocument
 
 _REPO_ROOT = Path(__file__).resolve().parents[3]
@@ -16,6 +17,10 @@ def artifacts_dir() -> Path:
     return _REPO_ROOT / "artifacts" / "docling"
 
 
+def page_sidecar(artifact_hash: str, page_no: int) -> Path:
+    return artifacts_dir() / f"{artifact_hash}.p{page_no}.png"
+
+
 def canonical_json_bytes(payload: dict) -> bytes:
     return json.dumps(
         payload,
@@ -23,6 +28,37 @@ def canonical_json_bytes(payload: dict) -> bytes:
         sort_keys=True,
         separators=(",", ":"),
     ).encode("utf-8")
+
+
+def _without_data_image_uris(node: object) -> object:
+    if isinstance(node, dict):
+        cleaned: dict = {}
+        for key, value in node.items():
+            if isinstance(value, str) and value.startswith("data:image"):
+                continue
+            cleaned[key] = _without_data_image_uris(value)
+        return cleaned
+    if isinstance(node, list):
+        cleaned_list: list = []
+        for value in node:
+            if isinstance(value, str) and value.startswith("data:image"):
+                continue
+            cleaned_list.append(_without_data_image_uris(value))
+        return cleaned_list
+    return node
+
+
+def strip_page_pixels(payload: dict) -> dict:
+    cleaned = copy.deepcopy(payload)
+    pages = cleaned.get("pages")
+    if isinstance(pages, dict):
+        for page in pages.values():
+            if isinstance(page, dict):
+                page.pop("image", None)
+    stripped = _without_data_image_uris(cleaned)
+    if not isinstance(stripped, dict):
+        raise IngestError("artifact JSON must be an object")
+    return stripped
 
 
 def _sha256_hex(data: bytes) -> str:
@@ -55,6 +91,25 @@ def _write_manifest(root: Path, manifest: dict[str, str]) -> None:
     )
 
 
+def _doclang_path(json_path: Path) -> Path:
+    return json_path.with_suffix(".dclg")
+
+
+def _ensure_doclang(json_path: Path, payload: dict) -> None:
+    path = _doclang_path(json_path)
+    if path.is_file():
+        return
+    path.write_text(doclang_from_payload(payload), encoding="utf-8")
+
+
+def _write_page_sidecars(artifact_hash: str) -> None:
+    from claimledger.ingest import parse as parse_mod
+
+    pngs = getattr(parse_mod, "last_page_pngs", None) or {}
+    for page_no, png in pngs.items():
+        page_sidecar(artifact_hash, int(page_no)).write_bytes(png)
+
+
 def load(artifact_hash: str) -> dict:
     path = artifacts_dir() / f"{artifact_hash}.json"
     if not path.is_file():
@@ -78,17 +133,24 @@ def load_or_convert(pdf: Path) -> StoredDocument:
     if artifact_hash:
         json_path = root / f"{artifact_hash}.json"
         if json_path.is_file():
+            if not _doclang_path(json_path).is_file():
+                cached = json.loads(json_path.read_text(encoding="utf-8"))
+                if not isinstance(cached, dict):
+                    raise IngestError("artifact JSON must be an object")
+                _ensure_doclang(json_path, cached)
             return StoredDocument(
                 artifact_hash=artifact_hash,
                 json_path=json_path,
                 source_pdf=resolved,
             )
-    payload = convert_pdf(resolved)
+    payload = strip_page_pixels(convert_pdf(resolved))
     raw = canonical_json_bytes(payload)
     artifact_hash = _sha256_hex(raw)
     root.mkdir(parents=True, exist_ok=True)
     json_path = root / f"{artifact_hash}.json"
     json_path.write_bytes(raw)
+    _ensure_doclang(json_path, payload)
+    _write_page_sidecars(artifact_hash)
     manifest[pdf_sha] = artifact_hash
     _write_manifest(root, manifest)
     return StoredDocument(

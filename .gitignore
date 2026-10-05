@@ -20,5 +20,7 @@ build/
 .env.*
 !.env.example
 artifacts/docling/*.json
+artifacts/docling/*.dclg
+artifacts/docling/*.png
 artifacts/docling/models/
 artifacts/graph/*.json
