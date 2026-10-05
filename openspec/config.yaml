@@ -38,6 +38,7 @@ rules:
     - Architecture is CLOSED. Do not invent new product architecture.
     - Canonical source: docs/documento-rector.md. Filter: docs/north-star.md. Fase 0 contract: docs/fase-0.md.
     - Include a rollback plan for risky changes.
+    - Native stack first. Do not propose a script for a job Docling, DocLang, docling-graph, LlamaIndex, Starlette, or Open WebUI already does in the pinned version. Custom code only for a named gap.
     - User-facing docs stay Spanish; this change artifact is English.
   specs:
     - Use Given/When/Then for scenarios.
@@ -47,6 +48,7 @@ rules:
   design:
     - Do not invent layers, agents, or stack substitutions.
     - Architecture Gate: a new component is allowed only if it solves a concrete problem the current design cannot.
+    - Native stack first. Prefer the pinned library call. Custom code only when that library cannot do the job, and the design names the gap.
     - Sequence diagrams only for flows already in the rector.
     - Document decisions with rationale; never MinerU; never Markdown as retrieval SoT.
   tasks:

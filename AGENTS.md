@@ -25,8 +25,10 @@ Do not add a component because “modern systems use it”. It must solve a prob
 
 Never: MinerU, Markdown as retrieval source of truth, LLM-written `identity_v1`/`identity_v2`, an agent that skips the kernel, relaxing gold numbers.
 
+Native stack first. Do not write a script or module for a job the pinned stack already does: Docling, DocLang, docling-graph, LlamaIndex, Starlette, Open WebUI. Call that API. Write code only when that stack cannot do the job, and name the gap. To review existing code, call `openspec/changes/auditoria-stack-nativo/`. That call is not a wave phase.
+
 ## Change workflow
 
 `sdd-explore` → `sdd-propose` → `sdd-spec` → `sdd-design` → `sdd-tasks` → `sdd-apply` → `sdd-verify` → `sdd-archive`.
 
-Active change: none. Archived: `openspec/changes/archive/2026-10-05-fase-7-openwebui/`, `openspec/changes/archive/2026-10-04-fase-7-ficha/`, `openspec/changes/archive/2026-10-04-fase-6-http/`, `openspec/changes/archive/2026-10-04-fase-4-verify-eval/`, `openspec/changes/archive/2026-10-04-fase-3-retrieval/`, `openspec/changes/archive/2026-10-04-fase-2-graph-ingest/`, `openspec/changes/archive/2026-10-04-fase-1-docling-adapter/`, `openspec/changes/archive/2026-09-23-fase-0-kernel/`.
+Active change: `openspec/changes/fase-1a-corpus-parse/`. On demand (not a wave step): `openspec/changes/auditoria-stack-nativo/`. Also on disk, not archived: `openspec/changes/fase-8-crop/`. Archived: `openspec/changes/archive/2026-10-05-fase-7-openwebui/`, `openspec/changes/archive/2026-10-04-fase-7-ficha/`, `openspec/changes/archive/2026-10-04-fase-6-http/`, `openspec/changes/archive/2026-10-04-fase-4-verify-eval/`, `openspec/changes/archive/2026-10-04-fase-3-retrieval/`, `openspec/changes/archive/2026-10-04-fase-2-graph-ingest/`, `openspec/changes/archive/2026-10-04-fase-1-docling-adapter/`, `openspec/changes/archive/2026-09-23-fase-0-kernel/`.
