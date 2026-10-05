@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import base64
 import hashlib
 import json
 from pathlib import Path
@@ -238,6 +239,228 @@ def test_reply_compare_copies_both_values_without_delta(
     assert _COMPARE_DELTA not in text
     assert "delta" not in text.casefold()
     assert f"{_SECOND_QUARTER_VALUE}-{_CONSOLIDATED_VALUE}" not in text
+
+
+_PAGE = 10
+_NET_BOX = (2.0, 5.0, 4.0, 6.0)
+_PARENT_BOX = (6.0, 1.0, 8.0, 3.0)
+_CROP_BBOX = (0.2, 0.5, 0.4, 0.6)
+
+
+def _pdf_box(left: float, bottom: float, right: float, top: float) -> dict:
+    return {
+        "l": left,
+        "b": bottom,
+        "r": right,
+        "t": top,
+        "coord_origin": "BOTTOMLEFT",
+    }
+
+
+def _cell(text: str, box: tuple[float, float, float, float] | None = None) -> dict:
+    cell: dict = {"text": text}
+    if box is not None:
+        cell["bbox"] = _pdf_box(*box)
+    return cell
+
+
+def _income_table(
+    self_ref: str,
+    header: str,
+    net_text: str,
+    parent_text: str,
+    page_no: int,
+) -> dict:
+    grid = [
+        [_cell(""), _cell(header)],
+        [_cell("Resultado bruto"), _cell("60.144.176")],
+        [_cell("RESULTADO NETO DEL PERÍODO"), _cell(net_text, _NET_BOX)],
+        [
+            _cell(
+                "Resultado neto del período atribuible a la participación controlante"
+            ),
+            _cell(parent_text, _PARENT_BOX),
+        ],
+    ]
+    return {
+        "self_ref": self_ref,
+        "content_layer": "body",
+        "parent": {"$ref": "#/body"},
+        "prov": [{"page_no": page_no, "bbox": _pdf_box(0.0, 0.0, 10.0, 10.0)}],
+        "data": {"grid": grid},
+    }
+
+
+def _picture_payload() -> dict:
+    tables = [
+        _income_table("#/tables/1t", "31.03.2026", "21.262.335", "21.259.769", 1),
+        _income_table("#/tables/2t", "30.06.2026", "81.956.525", "81.946.993", 2),
+    ]
+    payload = _neighbor_payload()
+    payload["pages"] = {
+        "1": {"page_no": 1, "size": {"width": float(_PAGE), "height": float(_PAGE)}},
+        "2": {"page_no": 2, "size": {"width": float(_PAGE), "height": float(_PAGE)}},
+    }
+    payload["body"] = {
+        "self_ref": "#/body",
+        "children": [{"$ref": table["self_ref"]} for table in tables],
+    }
+    payload["tables"] = tables
+    return payload
+
+
+def _rgb(marker: int) -> bytes:
+    pixels = bytearray(_PAGE * _PAGE * 3)
+    for offset in range(0, len(pixels), 3):
+        pixels[offset] = marker
+        pixels[offset + 2] = 255 - marker
+    return bytes(pixels)
+
+
+def _png_bytes(pixels: bytes) -> bytes:
+    from io import BytesIO
+
+    from PIL import Image
+
+    image = Image.frombytes("RGB", (_PAGE, _PAGE), pixels)
+    buffer = BytesIO()
+    image.save(buffer, format="PNG")
+    return buffer.getvalue()
+
+
+def _crop_markdown(png_file: bytes) -> str:
+    from io import BytesIO
+
+    from PIL import Image
+
+    from claimledger.crop.cut import crop_bbox
+
+    with Image.open(BytesIO(png_file)) as image:
+        rgb = image.convert("RGB")
+        cropped = crop_bbox(rgb.tobytes(), rgb.width, rgb.height, _CROP_BBOX)
+    assert cropped is not None
+    encoded = base64.b64encode(cropped).decode("ascii")
+    return f"![crop](data:image/png;base64,{encoded})"
+
+
+def _prepare_picture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[str, str, str]:
+    artifacts = tmp_path / "docling"
+    artifacts.mkdir()
+    monkeypatch.setattr(ingest_store, "artifacts_dir", lambda: artifacts)
+    raw = _canonical_json_bytes(_picture_payload())
+    digest = _sha256_hex(raw)
+    (artifacts / f"{digest}.json").write_bytes(raw)
+    page_one = _png_bytes(_rgb(17))
+    page_two = _png_bytes(_rgb(29))
+    (artifacts / f"{digest}.p1.png").write_bytes(page_one)
+    (artifacts / f"{digest}.p2.png").write_bytes(page_two)
+    _install_parsed_reader(monkeypatch)
+    return digest, _crop_markdown(page_one), _crop_markdown(page_two)
+
+
+def _consolidated_card() -> str:
+    return "\n".join(
+        (
+            "VERIFICADO",
+            "BYMA · 1T26 · Consolidado · Resultado neto",
+            _NEIGHBOR_CONSOLIDATED,
+            _NEIGHBOR_PARENT,
+            _CONSOLIDATED_VALUE,
+            "encontré estas dos filas; verifiqué la consolidada",
+        )
+    )
+
+
+def _abstain_card() -> str:
+    return "\n".join(
+        (
+            "ME ABSTENGO",
+            _NEIGHBOR_CONSOLIDATED,
+            _NEIGHBOR_PARENT,
+            "recipe_no_extract",
+        )
+    )
+
+
+def _compare_card() -> str:
+    return "\n".join(
+        (
+            "VERIFICADO",
+            "BYMA · 1T26 · Consolidado · Resultado neto",
+            "BYMA · 2T26 · Consolidado · Resultado neto",
+            _NEIGHBOR_CONSOLIDATED,
+            _NEIGHBOR_PARENT,
+            _CONSOLIDATED_VALUE,
+            _SECOND_QUARTER_VALUE,
+        )
+    )
+
+
+def _docling_modules() -> set[str]:
+    import sys
+
+    return {
+        name
+        for name in sys.modules
+        if name == "docling" or name.startswith("docling.")
+    }
+
+
+def _imports_docling(path: Path) -> bool:
+    import ast
+
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in ast.walk(tree):
+        names: list[str] = []
+        if isinstance(node, ast.Import):
+            names = [alias.name for alias in node.names]
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names = [node.module]
+        if any(name == "docling" or name.startswith("docling.") for name in names):
+            return True
+    return False
+
+
+def _picture_sources() -> list[Path]:
+    root = Path(__file__).resolve().parents[2]
+    return [
+        Path(__file__),
+        root / "src" / "claimledger" / "crop" / "cut.py",
+        root / "src" / "claimledger" / "crop" / "attach.py",
+        root / "src" / "claimledger" / "crop" / "__init__.py",
+        root / "src" / "claimledger" / "openwebui" / "reply.py",
+    ]
+
+
+def test_reply_picture_follows_card(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    assert [path.name for path in _picture_sources() if _imports_docling(path)] == []
+    before_docling = _docling_modules()
+    digest, earlier, later = _prepare_picture(tmp_path, monkeypatch)
+    assert earlier != later
+    assert "data:image/png;base64" in earlier
+
+    match = reply(digest, _CONSOLIDATED_QUESTION)
+    assert match == _consolidated_card() + "\n" + earlier
+    assert match.startswith(_consolidated_card() + "\n")
+    assert match.count("data:image/png;base64") == 1
+    assert later not in match
+
+    abstain = reply(digest, _ABSTAIN_QUESTION)
+    assert abstain == _abstain_card()
+    assert "data:image" not in abstain
+    assert _CONSOLIDATED_VALUE not in abstain
+    assert _PARENT_VALUE not in abstain
+
+    compare = reply(digest, _COMPARE_QUESTION)
+    assert compare == _compare_card() + "\n" + earlier + "\n" + later
+    card_only = compare.split("\n![crop]", 1)[0]
+    assert card_only == _compare_card()
+    assert _COMPARE_DELTA not in card_only
+    assert "delta" not in card_only.casefold()
+    assert compare.count("data:image/png;base64") == 2
+    assert _docling_modules() == before_docling
 
 
 def test_reply_bad_hash_raises_and_invents_no_rows(
@@ -481,12 +704,129 @@ def test_wave_c_still_waits() -> None:
         for path in (repo / "src" / "claimledger").iterdir()
         if path.is_dir() and path.name != "__pycache__"
     }
-    assert packages.isdisjoint({"crop", "chart", "charts", "orchestrator"})
+    assert "crop" in packages
+    assert packages.isdisjoint({"chart", "charts", "orchestrator"})
 
     active = [
         path.name
         for path in (repo / "openspec" / "changes").iterdir()
         if path.is_dir() and path.name != "archive"
     ]
-    assert active == ["fase-7-openwebui"]
-    assert not any(name.startswith(tuple(f"fase-{number}" for number in range(8, 14))) for name in active)
+    assert "fase-8-crop" in active
+    assert not any(
+        name.startswith(tuple(f"fase-{number}" for number in range(9, 14)))
+        for name in active
+    )
+
+
+def _kernel_allowlist() -> tuple[str, ...]:
+    import ast
+
+    repo = Path(__file__).resolve().parents[2]
+    tree = ast.parse((repo / "tests" / "test_identity.py").read_text(encoding="utf-8"))
+    for node in ast.walk(tree):
+        if not isinstance(node, ast.FunctionDef) or node.name != "_kernel_scan_paths":
+            continue
+        for stmt in node.body:
+            if isinstance(stmt, ast.Assign) and any(
+                isinstance(target, ast.Name) and target.id == "relatives" for target in stmt.targets
+            ):
+                return tuple(elt.value for elt in stmt.value.elts)
+    raise AssertionError("kernel allowlist missing")
+
+
+def _evidence_keys() -> set[str]:
+    import ast
+
+    repo = Path(__file__).resolve().parents[2]
+    tree = ast.parse(
+        (repo / "src" / "claimledger" / "http" / "claims.py").read_text(encoding="utf-8")
+    )
+    function = next(
+        node
+        for node in tree.body
+        if isinstance(node, ast.FunctionDef) and node.name == "_evidence"
+    )
+    keys: set[str] = set()
+    for node in ast.walk(function):
+        if not isinstance(node, ast.Dict):
+            continue
+        for key in node.keys:
+            if isinstance(key, ast.Constant) and isinstance(key.value, str):
+                keys.add(key.value)
+    return keys
+
+
+def test_query_and_card_stay_picture_free() -> None:
+    import dataclasses
+    import tomllib
+
+    from claimledger.card.card import ClaimCard, render_card
+    from claimledger.http.app import build_app
+    from claimledger.http.claims import claims_query
+    from claimledger.ledger import RECIPE_ROWS, Ledger
+    from claimledger.lookup import understand
+    from claimledger.query import query
+    from claimledger.retrieval.drawers import Candidate
+
+    consolidated = claims_query({"question": _CONSOLIDATED_QUESTION}, Ledger.seed())
+    parent = claims_query({"question": _PARENT_QUESTION}, Ledger.seed())
+    compared = claims_query({"question": _COMPARE_QUESTION}, Ledger.seed())
+    for body, value in (
+        (consolidated, _CONSOLIDATED_VALUE),
+        (parent, _PARENT_VALUE),
+    ):
+        dumped = json.dumps(body)
+        assert body["claim"]["value"] == value
+        assert value in dumped
+        assert "image" not in dumped
+        assert "bbox" not in dumped
+        assert "data:image" not in dumped
+    compared_dump = json.dumps(compared)
+    assert [item["value"] for item in compared["claims"]] == [
+        _CONSOLIDATED_VALUE,
+        _SECOND_QUARTER_VALUE,
+    ]
+    assert "image" not in compared_dump
+    assert "bbox" not in compared_dump
+    assert "data:image" not in compared_dump
+    assert _evidence_keys() == {"document_id", "page", "text"}
+
+    result = query(understand(_CONSOLIDATED_QUESTION), Ledger.seed())
+    card = render_card(
+        (
+            Candidate(drawer="tables", text=_NEIGHBOR_CONSOLIDATED, ref="#/tables/1"),
+            Candidate(drawer="tables", text=_NEIGHBOR_PARENT, ref="#/tables/1"),
+        ),
+        result,
+    )
+    assert {field.name for field in dataclasses.fields(ClaimCard)} == {
+        "seal",
+        "chips",
+        "rows",
+        "values",
+        "sentence",
+        "reason",
+    }
+    assert card.values == (_CONSOLIDATED_VALUE,)
+    rendered = card_text(card)
+    assert "data:image" not in rendered
+    assert "bbox" not in rendered
+    assert _CONSOLIDATED_VALUE in rendered
+
+    claims = build_app()
+    claim_routes = [route for route in claims.routes if getattr(route, "path", None)]
+    assert [route.path for route in claim_routes] == ["/claims/query"]
+    assert claim_routes[0].methods == {"POST"}
+
+    repo = Path(__file__).resolve().parents[2]
+    project = tomllib.loads((repo / "pyproject.toml").read_text(encoding="utf-8"))
+    assert project["project"]["dependencies"] == []
+    allowlist = _kernel_allowlist()
+    assert len(allowlist) == 13
+    assert not any("crop" in path for path in allowlist)
+    assert ("2026-03-31", "consolidated", "net_income", "21262335") in RECIPE_ROWS
+    assert ("2026-03-31", "parent_attributable", "net_income", "21259769") in RECIPE_ROWS
+    gold = (repo / "tests" / "test_gold_v1.py").read_text(encoding="utf-8")
+    assert 'ID_01_VALUE = "21262335"' in gold
+    assert '"21259769"' in gold
