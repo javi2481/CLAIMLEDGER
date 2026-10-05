@@ -472,3 +472,21 @@ def test_compose_pins_slim_screen() -> None:
     assert "pipelines" not in folded
     assert "knowledge" not in folded
     assert "mcp" not in folded
+
+
+def test_wave_c_still_waits() -> None:
+    repo = Path(__file__).resolve().parents[2]
+    packages = {
+        path.name
+        for path in (repo / "src" / "claimledger").iterdir()
+        if path.is_dir() and path.name != "__pycache__"
+    }
+    assert packages.isdisjoint({"crop", "chart", "charts", "orchestrator"})
+
+    active = [
+        path.name
+        for path in (repo / "openspec" / "changes").iterdir()
+        if path.is_dir() and path.name != "archive"
+    ]
+    assert active == ["fase-7-openwebui"]
+    assert not any(name.startswith(tuple(f"fase-{number}" for number in range(8, 14))) for name in active)

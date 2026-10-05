@@ -37,3 +37,7 @@ Chain strategy: feature-branch-chain on the current branch, no commits unless th
 
 - [x] 4.1 RED: `test_compose_pins_slim_screen` reads `docker-compose.yml` as text. No Docker. `claimledger` publishes no port, runs uvicorn `claimledger.openwebui.app:build_host` `--factory` on `8000`, and sets `CLAIMLEDGER_ARTIFACT_HASH`. `openwebui` is `ghcr.io/open-webui/open-webui:v0.11.4-slim` at `8080:8080`, base `http://claimledger:8000/v1`, key `claimledger`. OpenAI on. Ollama, titles, follow-ups, tags, autocomplete, Knowledge, tools, MCP, and Pipelines off. `Dockerfile` CMD stays `manual.ui:build_manual_app`. MUST fail now.
 - [x] 4.2 GREEN: Edit only `docker-compose.yml`. Leave `Dockerfile`, `manual/ui.py`, and `pyproject.toml`. MUST pass. Do not start Docker.
+
+## Phase 5: Wave C waits (Slice 5)
+
+- [x] 5.1 `test_wave_c_still_waits` locks Closed Bounds / Wave C waits. The package tree has no `crop`, `chart`, `charts`, or `orchestrator`. The only active change is `fase-7-openwebui`. No production code: the absence already held, so the new test passed on the first run.
