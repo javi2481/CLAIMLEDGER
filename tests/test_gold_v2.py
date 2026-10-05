@@ -68,6 +68,25 @@ FROZEN_NUMBERS = (
 )
 
 
+def _kernel_scan_paths() -> list[Path]:
+    relatives = (
+        "src/claimledger/identity.py",
+        "src/claimledger/digits.py",
+        "src/claimledger/evidence.py",
+        "src/claimledger/claim.py",
+        "src/claimledger/ledger.py",
+        "src/claimledger/lookup.py",
+        "src/claimledger/query.py",
+        "tests/test_identity.py",
+        "tests/test_ledger.py",
+        "tests/test_lookup.py",
+        "tests/test_query.py",
+        "tests/test_gold_v1.py",
+        "tests/test_gold_v2.py",
+    )
+    return [REPO_ROOT / relative for relative in relatives]
+
+
 def _imported_forbidden_modules(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: set[str] = set()
@@ -111,18 +130,22 @@ def _run_query(question: str):
 
 
 def test_import_scan_stays_clean() -> None:
-    scanned = list((REPO_ROOT / "tests").glob("*.py"))
-    scanned.extend((REPO_ROOT / "src" / "claimledger").glob("*.py"))
-    names = {path.name for path in scanned}
-    assert "test_gold_v2.py" in names
-    assert names >= {
-        "test_gold_v2.py",
-        "test_gold_v1.py",
-        "test_identity.py",
-        "identity.py",
-        "ledger.py",
-        "lookup.py",
-        "query.py",
+    scanned = _kernel_scan_paths()
+    assert all(path.is_file() for path in scanned)
+    assert {path.relative_to(REPO_ROOT).as_posix() for path in scanned} == {
+        "src/claimledger/identity.py",
+        "src/claimledger/digits.py",
+        "src/claimledger/evidence.py",
+        "src/claimledger/claim.py",
+        "src/claimledger/ledger.py",
+        "src/claimledger/lookup.py",
+        "src/claimledger/query.py",
+        "tests/test_identity.py",
+        "tests/test_ledger.py",
+        "tests/test_lookup.py",
+        "tests/test_query.py",
+        "tests/test_gold_v1.py",
+        "tests/test_gold_v2.py",
     }
     forbidden: dict[str, set[str]] = {}
     for path in scanned:

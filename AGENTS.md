@@ -29,4 +29,4 @@ Never: MinerU, Markdown as retrieval source of truth, LLM-written `identity_v1`/
 
 `sdd-explore` → `sdd-propose` → `sdd-spec` → `sdd-design` → `sdd-tasks` → `sdd-apply` → `sdd-verify` → `sdd-archive`.
 
-Active change: none. Archived: `openspec/changes/archive/2026-09-23-fase-0-kernel/`. Next: `fase-1-docling-adapter`.
+Active change: `openspec/changes/fase-7-openwebui/`. Archived: `openspec/changes/archive/2026-10-04-fase-7-ficha/`, `openspec/changes/archive/2026-10-04-fase-6-http/`, `openspec/changes/archive/2026-10-04-fase-4-verify-eval/`, `openspec/changes/archive/2026-10-04-fase-3-retrieval/`, `openspec/changes/archive/2026-10-04-fase-2-graph-ingest/`, `openspec/changes/archive/2026-10-04-fase-1-docling-adapter/`, `openspec/changes/archive/2026-09-23-fase-0-kernel/`.

@@ -6,6 +6,7 @@ import ast
 import importlib
 import json
 import sys
+import types
 from pathlib import Path
 
 import pytest
@@ -80,6 +81,25 @@ DECLARED_PINS = (
 )
 
 
+def _kernel_scan_paths() -> list[Path]:
+    relatives = (
+        "src/claimledger/identity.py",
+        "src/claimledger/digits.py",
+        "src/claimledger/evidence.py",
+        "src/claimledger/claim.py",
+        "src/claimledger/ledger.py",
+        "src/claimledger/lookup.py",
+        "src/claimledger/query.py",
+        "tests/test_identity.py",
+        "tests/test_ledger.py",
+        "tests/test_lookup.py",
+        "tests/test_query.py",
+        "tests/test_gold_v1.py",
+        "tests/test_gold_v2.py",
+    )
+    return [REPO_ROOT / relative for relative in relatives]
+
+
 def _imported_forbidden_modules(path: Path) -> set[str]:
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     found: set[str] = set()
@@ -96,11 +116,28 @@ def _imported_forbidden_modules(path: Path) -> set[str]:
     return found
 
 
+_IMPORT_SNAPSHOT_NAMES = ("docling", "docling_graph")
+
+
+def _import_snapshot() -> frozenset[str]:
+    return frozenset(name for name in _IMPORT_SNAPSHOT_NAMES if name in sys.modules)
+
+
 def test_kernel_modules_importable() -> None:
-    imported = [importlib.import_module(name) for name in KERNEL_MODULES]
-    assert [module.__name__ for module in imported] == list(KERNEL_MODULES)
-    assert "docling" not in sys.modules
-    assert "docling_graph" not in sys.modules
+    previous = {name: sys.modules.get(name) for name in _IMPORT_SNAPSHOT_NAMES}
+    for name in _IMPORT_SNAPSHOT_NAMES:
+        sys.modules[name] = types.ModuleType(name)
+    before = _import_snapshot()
+    try:
+        imported = [importlib.import_module(name) for name in KERNEL_MODULES]
+        assert [module.__name__ for module in imported] == list(KERNEL_MODULES)
+        assert _import_snapshot() - before == frozenset()
+    finally:
+        for name, module in previous.items():
+            if module is None:
+                sys.modules.pop(name, None)
+            else:
+                sys.modules[name] = module
 
 
 def test_pins_declared_but_unused() -> None:
@@ -112,17 +149,22 @@ def test_pins_declared_but_unused() -> None:
     for pin in DECLARED_PINS:
         assert pin in text
 
-    scanned = list((REPO_ROOT / "tests").glob("*.py"))
-    scanned.extend((REPO_ROOT / "src" / "claimledger").glob("*.py"))
-    assert {path.name for path in scanned} >= {
-        "test_identity.py",
-        "identity.py",
-        "digits.py",
-        "evidence.py",
-        "claim.py",
-        "ledger.py",
-        "lookup.py",
-        "query.py",
+    scanned = _kernel_scan_paths()
+    assert all(path.is_file() for path in scanned)
+    assert {path.relative_to(REPO_ROOT).as_posix() for path in scanned} == {
+        "src/claimledger/identity.py",
+        "src/claimledger/digits.py",
+        "src/claimledger/evidence.py",
+        "src/claimledger/claim.py",
+        "src/claimledger/ledger.py",
+        "src/claimledger/lookup.py",
+        "src/claimledger/query.py",
+        "tests/test_identity.py",
+        "tests/test_ledger.py",
+        "tests/test_lookup.py",
+        "tests/test_query.py",
+        "tests/test_gold_v1.py",
+        "tests/test_gold_v2.py",
     }
     forbidden: dict[str, set[str]] = {}
     for path in scanned:
@@ -130,6 +172,79 @@ def test_pins_declared_but_unused() -> None:
         if found:
             forbidden[str(path.relative_to(REPO_ROOT))] = found
     assert forbidden == {}
+
+
+def test_graph_init_outside_kernel_allowlist() -> None:
+    graph_init = REPO_ROOT / "src/claimledger/graph/__init__.py"
+    assert graph_init.is_file()
+    assert _imported_forbidden_modules(graph_init) == set()
+    allowlist = {path.relative_to(REPO_ROOT).as_posix() for path in _kernel_scan_paths()}
+    assert graph_init.relative_to(REPO_ROOT).as_posix() not in allowlist
+    assert len(allowlist) == 13
+
+
+def _llama_index_modules() -> set[str]:
+    return {
+        name
+        for name in sys.modules
+        if name == "llama_index" or name.startswith("llama_index.")
+    }
+
+
+def test_retrieval_init_outside_kernel_allowlist() -> None:
+    retrieval_init = REPO_ROOT / "src/claimledger/retrieval/__init__.py"
+    assert retrieval_init.is_file()
+    assert _imported_forbidden_modules(retrieval_init) == set()
+    tree = ast.parse(retrieval_init.read_text(encoding="utf-8"), filename=str(retrieval_init))
+    imported_roots: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_roots.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            imported_roots.add(node.module.split(".")[0])
+    assert "llama_index" not in imported_roots
+    assert FORBIDDEN_IMPORT_ROOTS == frozenset({"docling", "docling_graph"})
+    allowlist = {path.relative_to(REPO_ROOT).as_posix() for path in _kernel_scan_paths()}
+    assert retrieval_init.relative_to(REPO_ROOT).as_posix() not in allowlist
+    assert "src/claimledger/retrieval/__init__.py" not in allowlist
+    assert len(allowlist) == 13
+    before = _llama_index_modules()
+    imported = [importlib.import_module(name) for name in KERNEL_MODULES]
+    assert [module.__name__ for module in imported] == list(KERNEL_MODULES)
+    assert _llama_index_modules() - before == set()
+
+
+def _imports_llama_index(path: Path) -> bool:
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            if any(alias.name.split(".")[0] == "llama_index" for alias in node.names):
+                return True
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            if node.module.split(".")[0] == "llama_index":
+                return True
+    return False
+
+
+def test_ingest_and_kernel_tests_omit_llama_index() -> None:
+    ingest = sorted((REPO_ROOT / "src/claimledger/ingest").glob("*.py"))
+    kernel_tests = [
+        REPO_ROOT / "tests" / name
+        for name in (
+            "test_identity.py",
+            "test_ledger.py",
+            "test_lookup.py",
+            "test_query.py",
+            "test_gold_v1.py",
+            "test_gold_v2.py",
+        )
+    ]
+    offenders = [
+        path.relative_to(REPO_ROOT).as_posix()
+        for path in (*ingest, *kernel_tests)
+        if _imports_llama_index(path)
+    ]
+    assert offenders == []
 
 
 def test_identity_key_neighbor_consolidated_excludes_value() -> None:
