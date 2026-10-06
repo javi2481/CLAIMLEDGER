@@ -23,8 +23,8 @@ Chain strategy: none. Artifacts stay gitignored.
 
 ## Phase 2: Corpus pass (apply)
 
-- [ ] 2.1 Run `load_or_convert` on each PDF in `docs/archivos_muestra`. Do not add a second parser.
-- [ ] 2.2 The three existing hashes stay `7b7b624ade1011f9fd75931968312ef5c0fa19fe6061bb2cc5eb1491ffaa364f`, `38406b4b606b9eef004d2319b875584a229452c8981a730d0d9c2321eb6dfc2b`, and `b609e48e506b73ee7933329cbdf9cec1eda2fa365afcb71ea7dc525d536fb76c`. Each gains a `.dclg` only.
-- [ ] 2.3 The seven missing PDFs each gain JSON and `.dclg` from one local convert. OCR stays off. Pin stays `docling==2.130.0`.
-- [ ] 2.4 Do not call `extract_recipe` on comunicado, deck, memoria, or transcript. Do not edit gold, the kernel, retrieval, or `fase-8-crop`.
-- [ ] 2.5 Confirm manifest length 10, ten `.dclg` files, and `pytest tests/ingest/test_store.py -k doclang` still green.
+- [x] 2.1 Run `load_or_convert` on each PDF in `docs/archivos_muestra`. Do not add a second parser.
+- [x] 2.2 The three existing hashes stay `7b7b624ade1011f9fd75931968312ef5c0fa19fe6061bb2cc5eb1491ffaa364f`, `38406b4b606b9eef004d2319b875584a229452c8981a730d0d9c2321eb6dfc2b`, and `b609e48e506b73ee7933329cbdf9cec1eda2fa365afcb71ea7dc525d536fb76c`. Each gains a `.dclg` only.
+- [x] 2.3 The seven missing PDFs each gain JSON and `.dclg` from one local convert. OCR stays off. Pin stays `docling==2.130.0`.
+- [x] 2.4 Do not call `extract_recipe` on comunicado, deck, memoria, or transcript. Do not edit gold, the kernel, retrieval, or `fase-8-crop`.
+- [x] 2.5 Confirm manifest length 10, ten `.dclg` files, and `pytest tests/ingest/test_store.py -k doclang` still green.

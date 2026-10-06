@@ -101,6 +101,7 @@ def _sha256_hex(data: bytes) -> str:
 
 def _neighbor_payload() -> dict:
     return {
+        "name": "sample",
         "parsed_nodes": [
             {
                 "text": "Estado de Resultados",
@@ -286,15 +287,21 @@ def _income_table(
         "self_ref": self_ref,
         "content_layer": "body",
         "parent": {"$ref": "#/body"},
-        "prov": [{"page_no": page_no, "bbox": _pdf_box(0.0, 0.0, 10.0, 10.0)}],
+        "prov": [
+            {
+                "page_no": page_no,
+                "charspan": [0, 0],
+                "bbox": _pdf_box(0.0, 0.0, 10.0, 10.0),
+            }
+        ],
         "data": {"grid": grid},
     }
 
 
 def _picture_payload() -> dict:
     tables = [
-        _income_table("#/tables/1t", "31.03.2026", "21.262.335", "21.259.769", 1),
-        _income_table("#/tables/2t", "30.06.2026", "81.956.525", "81.946.993", 2),
+        _income_table("#/tables/0", "31.03.2026", "21.262.335", "21.259.769", 1),
+        _income_table("#/tables/1", "30.06.2026", "81.956.525", "81.946.993", 2),
     ]
     payload = _neighbor_payload()
     payload["pages"] = {

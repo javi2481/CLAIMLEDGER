@@ -190,13 +190,20 @@ def _income_table(
         "self_ref": self_ref,
         "content_layer": "body",
         "parent": {"$ref": "#/body"},
-        "prov": [{"page_no": page_no, "bbox": _pdf_box(*_TABLE_BOX)}],
+        "prov": [
+            {
+                "page_no": page_no,
+                "charspan": [0, 0],
+                "bbox": _pdf_box(*_TABLE_BOX),
+            }
+        ],
         "data": {"grid": grid},
     }
 
 
 def _payload(tables: list[dict], page_nos: tuple[int, ...]) -> dict:
     return {
+        "name": "sample",
         "pages": {
             str(page_no): {
                 "page_no": page_no,
@@ -330,7 +337,7 @@ def test_attach_matches_identity_key_and_value(tmp_path: Path, monkeypatch) -> N
         _payload(
             [
                 _income_table(
-                    "#/tables/match",
+                    "#/tables/0",
                     "31.03.2026",
                     "21.262.335",
                     "21.259.769",
@@ -367,7 +374,7 @@ def test_attach_matches_identity_key_and_value(tmp_path: Path, monkeypatch) -> N
         _payload(
             [
                 _income_table(
-                    "#/tables/other",
+                    "#/tables/0",
                     "31.03.2026",
                     "11.111.111",
                     "21.259.769",
@@ -396,7 +403,7 @@ def test_attach_matches_identity_key_and_value(tmp_path: Path, monkeypatch) -> N
         _payload(
             [
                 _income_table(
-                    "#/tables/missing",
+                    "#/tables/0",
                     "31.03.2026",
                     "21.262.335",
                     "21.259.769",
@@ -422,14 +429,14 @@ def test_attach_matches_identity_key_and_value(tmp_path: Path, monkeypatch) -> N
         _payload(
             [
                 _income_table(
-                    "#/tables/2t",
+                    "#/tables/0",
                     "30.06.2026",
                     "81.956.525",
                     "81.946.993",
                     page_no=2,
                 ),
                 _income_table(
-                    "#/tables/1t",
+                    "#/tables/1",
                     "31.03.2026",
                     "21.262.335",
                     "21.259.769",

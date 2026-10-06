@@ -75,6 +75,7 @@ def _table(
         "prov": [
             {
                 "page_no": page_no,
+                "charspan": [0, 0],
                 "bbox": {
                     "l": 50.0,
                     "b": 80.0,
@@ -122,6 +123,7 @@ def _document(
     tables = furniture_tables + body_tables
     return {
         "schema_name": "DoclingDocument",
+        "name": "sample",
         "pages": {
             "4": {
                 "page_no": 4,
@@ -358,6 +360,45 @@ def test_eeff_outside_recipe_periods_stays_empty(tmp_path: Path) -> None:
     assert extract_recipe(stored, comunicado_period) == ()
 
 
+def test_body_tables_come_from_iterate_items(tmp_path: Path) -> None:
+    pdf = CORPUS / "BYMA_-_EEFF_31-03-2026_VF.pdf"
+    poisoned = _recipe_grid("31.03.2026")
+    for row in poisoned:
+        if row[0]["text"] == "RESULTADO NETO DEL PERÍODO":
+            row[2] = _cell("9.999.999")
+    stored = _stored(
+        tmp_path,
+        pdf,
+        _document(
+            body_tables=[
+                _table(
+                    "#/tables/1",
+                    _recipe_grid("31.03.2026"),
+                    layer="body",
+                    parent="#/body",
+                )
+            ],
+            furniture_tables=[
+                _table(
+                    "#/tables/0",
+                    poisoned,
+                    layer="furniture",
+                    parent="#/furniture",
+                )
+            ],
+        ),
+    )
+    document = DocumentClass(kind="eeff", issuer="BYMA", period=PERIOD_1T26)
+
+    claims = extract_recipe(stored, document)
+
+    assert FURNITURE_FIGURE not in {claim.value for claim in claims}
+    source = (INGEST_ROOT / "extract.py").read_text(encoding="utf-8")
+    assert "iterate_items" in source
+    assert "def _index_items" not in source
+    assert "def _ordered_items" not in source
+
+
 def test_extract_recipe_is_exported_from_ingest_package() -> None:
     import claimledger.ingest as ingest
 
@@ -370,3 +411,61 @@ def test_extract_source_reads_grid_not_markdown() -> None:
     assert "TableData" not in source or "grid" in source
     assert ".grid" in source or '["grid"]' in source or "['grid']" in source
     assert "furniture" in source
+
+
+def _table_from_cells(self_ref: str, grid: list[list[dict]]) -> dict:
+    table = _table(self_ref, grid, layer="body", parent="#/body")
+    cells = []
+    for row_index, row in enumerate(grid):
+        for col_index, cell in enumerate(row):
+            cells.append(
+                {
+                    "text": cell["text"],
+                    "bbox": cell["bbox"],
+                    "start_row_offset_idx": row_index,
+                    "end_row_offset_idx": row_index + 1,
+                    "start_col_offset_idx": col_index,
+                    "end_col_offset_idx": col_index + 1,
+                }
+            )
+    table["data"] = {
+        "num_rows": len(grid),
+        "num_cols": len(grid[0]) if grid else 0,
+        "table_cells": cells,
+    }
+    return table
+
+
+def test_cells_without_grid_match_stored_grid(tmp_path: Path) -> None:
+    pdf = CORPUS / "BYMA_-_EEFF_31-03-2026_VF.pdf"
+    grid = _recipe_grid("31.03.2026")
+    with_grid = _stored(
+        tmp_path,
+        pdf,
+        _document(
+            body_tables=[_table("#/tables/0", grid, layer="body", parent="#/body")],
+            furniture_tables=[],
+        ),
+    )
+    from_cells = _stored(
+        tmp_path,
+        pdf,
+        _document(
+            body_tables=[_table_from_cells("#/tables/0", grid)],
+            furniture_tables=[],
+        ),
+    )
+    document = DocumentClass(kind="eeff", issuer="BYMA", period=PERIOD_1T26)
+
+    def _slots(stored: StoredDocument) -> set[tuple[str, str, str]]:
+        return {
+            (claim.scope, claim.metric, claim.value)
+            for claim in extract_recipe(stored, document)
+        }
+
+    assert _slots(from_cells) == _slots(with_grid)
+    assert _slots(from_cells)
+
+    source = (INGEST_ROOT / "extract.py").read_text(encoding="utf-8")
+    assert "TableData" in source
+    assert "start_row_offset_idx" not in source

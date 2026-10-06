@@ -52,66 +52,25 @@ def extract_recipe(
 
 
 def _body_tables(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    index = _index_items(payload)
+    """Body tables. iterate_items leaves furniture out by default."""
+    from claimledger.ingest.parse import _require_pinned_docling
+
+    _require_pinned_docling()
+    from docling_core.types.doc.document import DoclingDocument, TableItem
+
+    document = DoclingDocument.model_validate(payload)
+    by_ref: dict[str, dict[str, Any]] = {}
+    for item in payload.get("tables") or []:
+        if isinstance(item, dict) and isinstance(item.get("self_ref"), str):
+            by_ref[item["self_ref"]] = item
     tables: list[dict[str, Any]] = []
-    for item in _ordered_items(payload.get("body"), index):
-        ref = item.get("self_ref")
-        if not isinstance(ref, str) or not ref.startswith("#/tables/"):
+    for item, _level in document.iterate_items():
+        if not isinstance(item, TableItem):
             continue
-        if item.get("content_layer") == "furniture":
-            continue
-        parent = item.get("parent")
-        if isinstance(parent, dict) and parent.get("$ref") == "#/furniture":
-            continue
-        tables.append(item)
+        stored = by_ref.get(item.self_ref)
+        if stored is not None:
+            tables.append(stored)
     return tables
-
-
-def _index_items(payload: dict[str, Any]) -> dict[str, dict[str, Any]]:
-    index: dict[str, dict[str, Any]] = {}
-    for key in ("texts", "tables", "groups", "pictures", "key_value_items"):
-        for item in payload.get(key) or []:
-            if isinstance(item, dict) and isinstance(item.get("self_ref"), str):
-                index[item["self_ref"]] = item
-    for key in ("body", "furniture"):
-        node = payload.get(key)
-        if isinstance(node, dict) and isinstance(node.get("self_ref"), str):
-            index[node["self_ref"]] = node
-    return index
-
-
-def _ordered_items(
-    root: object, index: dict[str, dict[str, Any]]
-) -> list[dict[str, Any]]:
-    ordered: list[dict[str, Any]] = []
-    seen: set[str] = set()
-
-    def walk(node: object) -> None:
-        if isinstance(node, list):
-            for child in node:
-                walk(child)
-            return
-        if not isinstance(node, dict):
-            return
-        ref = node.get("$ref")
-        target = index.get(ref) if isinstance(ref, str) else None
-        if target is None and isinstance(node.get("self_ref"), str):
-            target = node
-        if not isinstance(target, dict):
-            return
-        ident = target.get("self_ref")
-        if isinstance(ident, str):
-            if ident in seen:
-                return
-            seen.add(ident)
-            ordered.append(target)
-        for child in target.get("children") or []:
-            walk(child)
-
-    if isinstance(root, dict):
-        for child in root.get("children") or []:
-            walk(child)
-    return ordered
 
 
 def _table_grid(table: dict[str, Any]) -> list[list[dict[str, Any]]]:
@@ -121,29 +80,17 @@ def _table_grid(table: dict[str, Any]) -> list[list[dict[str, Any]]]:
     grid = data.get("grid")
     if isinstance(grid, list) and grid:
         return [row for row in grid if isinstance(row, list)]
-    return _grid_from_cells(data)
+    return _grid_from_table_data(data)
 
 
-def _grid_from_cells(data: dict[str, Any]) -> list[list[dict[str, Any]]]:
-    """Same span expansion as TableData.grid when the export omitted the grid."""
-    num_rows = int(data.get("num_rows") or 0)
-    num_cols = int(data.get("num_cols") or 0)
-    if num_rows <= 0 or num_cols <= 0:
-        return []
-    grid: list[list[dict[str, Any]]] = [
-        [{} for _ in range(num_cols)] for _ in range(num_rows)
-    ]
-    for cell in data.get("table_cells") or []:
-        if not isinstance(cell, dict):
-            continue
-        row_start = int(cell.get("start_row_offset_idx") or 0)
-        row_end = int(cell.get("end_row_offset_idx") or row_start + 1)
-        col_start = int(cell.get("start_col_offset_idx") or 0)
-        col_end = int(cell.get("end_col_offset_idx") or col_start + 1)
-        for row_index in range(max(row_start, 0), min(row_end, num_rows)):
-            for col_index in range(max(col_start, 0), min(col_end, num_cols)):
-                grid[row_index][col_index] = cell
-    return grid
+def _grid_from_table_data(data: dict[str, Any]) -> list[list[dict[str, Any]]]:
+    from claimledger.ingest.parse import _require_pinned_docling
+
+    _require_pinned_docling()
+    from docling_core.types.doc.document import TableData
+
+    grid = TableData.model_validate(data).grid
+    return [[cell.model_dump() for cell in row] for row in grid]
 
 
 def _is_consolidated_income_table(grid: list[list[dict[str, Any]]]) -> bool:
