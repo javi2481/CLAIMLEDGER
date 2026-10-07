@@ -23,7 +23,7 @@ services:
     command:
       ["uvicorn", "claimledger.openwebui.app:build_host", "--factory", "--host", "0.0.0.0", "--port", "8000"]
     environment:
-      CLAIMLEDGER_ARTIFACT_HASH: ${CLAIMLEDGER_ARTIFACT_HASH:-7b7b624ade1011f9fd75931968312ef5c0fa19fe6061bb2cc5eb1491ffaa364f}
+      CLAIMLEDGER_ARTIFACT_HASH: ${CLAIMLEDGER_ARTIFACT_HASH:-393618ab17710f6d9c7fdf7fe7147da81ba2de9895436548c0cfba54301aa169}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
       DOCLING_SERVE_URL: ${DOCLING_SERVE_URL:-http://docling-serve:5001}
     volumes:
