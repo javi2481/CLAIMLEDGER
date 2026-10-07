@@ -1,9 +1,8 @@
-"""Recipe P&L claims from a hashed Docling JSON grid. Furniture is ignored."""
+"""Recipe P&L claims from a hashed JSON grid. Furniture is ignored."""
 
 from __future__ import annotations
 
 import json
-from importlib.metadata import version
 from typing import Any
 
 from claimledger.claim import FinancialClaim
@@ -13,8 +12,6 @@ from claimledger.identity import PERIOD_1T26, PERIOD_2T26, fold, identity_key
 from claimledger.ingest.classify import DocumentClass
 from claimledger.ingest.types import IngestError, StoredDocument
 
-# extract_recipe may use docling_core; convert path does not pin in-process.
-PINNED_DOCLING = "2.130.0"
 _STATEMENT = "income_statement"
 _RECIPE_PERIODS = frozenset({PERIOD_1T26, PERIOD_2T26})
 _PERIOD_END = {
@@ -54,57 +51,67 @@ def extract_recipe(
     return tuple(found.values())
 
 
-def _require_pinned_docling() -> None:
-    installed = version("docling")
-    if installed != PINNED_DOCLING:
-        raise IngestError(
-            f"docling {installed} does not match pin {PINNED_DOCLING}"
-        )
-
-
-def _load_pinned_docling() -> None:
-    # Docling imports NumPy before torch. On Windows that order fails c10.dll init.
-    import torch  # noqa: F401
-
-    _require_pinned_docling()
+def _resolve_ref(payload: dict[str, Any], ref: str) -> dict[str, Any] | None:
+    if not ref.startswith("#/"):
+        return None
+    parts = ref[2:].split("/")
+    if len(parts) != 2:
+        return None
+    collection, index_text = parts
+    try:
+        index = int(index_text)
+    except ValueError:
+        return None
+    items = payload.get(collection)
+    if not isinstance(items, list) or index < 0 or index >= len(items):
+        return None
+    item = items[index]
+    return item if isinstance(item, dict) else None
 
 
 def _body_tables(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Body tables. iterate_items leaves furniture out by default."""
-    _load_pinned_docling()
-    from docling_core.types.doc.document import DoclingDocument, TableItem
-
-    document = DoclingDocument.model_validate(payload)
-    by_ref: dict[str, dict[str, Any]] = {}
-    for item in payload.get("tables") or []:
-        if isinstance(item, dict) and isinstance(item.get("self_ref"), str):
-            by_ref[item["self_ref"]] = item
+    """Body tables via local `$ref` walk from `body` (nested groups allowed)."""
+    body = payload.get("body")
+    if not isinstance(body, dict):
+        return []
     tables: list[dict[str, Any]] = []
-    for item, _level in document.iterate_items():
-        if not isinstance(item, TableItem):
+    seen_refs: set[str] = set()
+    stack: list[dict[str, Any]] = [body]
+    while stack:
+        node = stack.pop()
+        children = node.get("children")
+        if not isinstance(children, list):
             continue
-        stored = by_ref.get(item.self_ref)
-        if stored is not None:
-            tables.append(stored)
+        for child in children:
+            if not isinstance(child, dict):
+                continue
+            ref = child.get("$ref")
+            if not isinstance(ref, str) or ref in seen_refs:
+                continue
+            if ref.startswith("#/furniture"):
+                continue
+            seen_refs.add(ref)
+            resolved = _resolve_ref(payload, ref)
+            if resolved is None:
+                continue
+            if ref.startswith("#/tables/"):
+                tables.append(resolved)
+                continue
+            stack.append(resolved)
     return tables
 
 
 def _table_grid(table: dict[str, Any]) -> list[list[dict[str, Any]]]:
     data = table.get("data")
     if not isinstance(data, dict):
-        return []
+        raise IngestError("table is missing data.grid")
     grid = data.get("grid")
-    if isinstance(grid, list) and grid:
-        return [row for row in grid if isinstance(row, list)]
-    return _grid_from_table_data(data)
-
-
-def _grid_from_table_data(data: dict[str, Any]) -> list[list[dict[str, Any]]]:
-    _load_pinned_docling()
-    from docling_core.types.doc.document import TableData
-
-    grid = TableData.model_validate(data).grid
-    return [[cell.model_dump() for cell in row] for row in grid]
+    if not isinstance(grid, list) or not grid:
+        raise IngestError("table is missing a non-empty data.grid")
+    rows = [row for row in grid if isinstance(row, list)]
+    if not rows:
+        raise IngestError("table is missing a non-empty data.grid")
+    return rows
 
 
 def _is_consolidated_income_table(grid: list[list[dict[str, Any]]]) -> bool:

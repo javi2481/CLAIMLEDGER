@@ -1,8 +1,9 @@
 """In-memory book from the two quarterly statements.
 
-Gap: no pinned API joins two hashed Docling documents into the ledger
-query reads. Docling parses. extract_recipe maps the recipe. Ledger.upsert
-records. This module is that join. It does not write a claim cache.
+Gap: no pinned API joins two hashed JSON documents into the ledger
+query reads. The compiler writes JSON. extract_recipe maps the recipe.
+Ledger.upsert records. This module is that join. It does not write a
+claim cache.
 """
 
 from __future__ import annotations

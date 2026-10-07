@@ -27,5 +27,5 @@ jobs:
 
       - name: Ingest, graph, and retrieval
         run: |
-          uv sync --frozen --all-extras
+          uv sync --frozen --extra dev --extra ingest --extra docling --extra retrieval --extra http --extra deepseek
           uv run --no-sync pytest tests/ingest tests/graph tests/retrieval tests/crop tests/openwebui

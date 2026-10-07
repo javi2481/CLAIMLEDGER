@@ -5,7 +5,7 @@ strict_tdd: true
 
 context: |
   CLAIMLEDGER: verified financial claims ledger. Architecture CLOSED (docs/documento-rector.md).
-  Phases 0–9 and 11–13 are implemented. Phase 10 (VLM second reader) is deferred until a GPU exists. Active change: none. Archived max-docling-parse (Docling Serve v1.35.0 compiler; convert via POST /v1/convert/file ZIP; query independent of serve). Archived llm-tools-host (agent/ verify+search; host-gated DeepSeek prose). Archived ground-ledger (product book from quarterly EEFF; hash check on load).
+  Phases 0–9 and 11–13 are implemented. Phase 10 (VLM second reader) is deferred until a GPU exists. Active change: none. Archived runtime-json-book (pure-JSON extract_recipe body $ref walk + data.grid only; ingest=[httpx]; book/query Docling-free; reply/DoclingReader deferred). Archived max-docling-parse (Docling Serve v1.35.0 compiler; convert via POST /v1/convert/file ZIP; query independent of serve). Archived llm-tools-host (agent/ verify+search; host-gated DeepSeek prose). Archived ground-ledger (product book from quarterly EEFF; hash check on load).
   Status for humans: docs/plan-implementacion.md. Phase 11 writes graph.cypher via CypherExporter and does not start Neo4j. Phase 12 is a Mermaid xychart of a verified series. Phase 13 is a deterministic four-quarter plan that calls query. Product paths use recorded_book(); kernel gold stays Ledger.seed(). Completions may append host-gated agent prose or the controlled abstention template after the card.
   Native-stack audit is on demand at openspec/changes/auditoria-stack-nativo/. It is not a wave phase.
   Python >=3.11 + pytest. Pins: docling==2.130.0, docling-graph==1.9.1, llama-index docling reader and node parser 0.5.0, starlette==1.0.0, Open WebUI v0.11.4-slim.

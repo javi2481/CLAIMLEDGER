@@ -14,7 +14,7 @@ from claimledger.identity import PERIOD_1T26, PERIOD_2T26, identity_key
 from claimledger.ingest.classify import DocumentClass, classify
 from claimledger.ingest.extract import extract_recipe
 from claimledger.ingest.store import load_or_convert
-from claimledger.ingest.types import StoredDocument
+from claimledger.ingest.types import IngestError, StoredDocument
 from claimledger.ledger import RECIPE_ROWS
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -119,6 +119,8 @@ def _document(
     *,
     body_tables: list[dict],
     furniture_tables: list[dict],
+    body_children: list[dict] | None = None,
+    groups: list[dict] | None = None,
 ) -> dict:
     tables = furniture_tables + body_tables
     return {
@@ -138,10 +140,16 @@ def _document(
         "body": {
             "self_ref": "#/body",
             "content_layer": "body",
-            "children": [{"$ref": table["self_ref"]} for table in body_tables],
+            "children": body_children
+            if body_children is not None
+            else [{"$ref": table["self_ref"]} for table in body_tables],
         },
+        "groups": groups or [],
         "tables": tables,
     }
+
+
+_BANNED_EXTRACT_TOKENS = ("docling", "docling_core", "torch", "PINNED_DOCLING")
 
 
 def _stored(tmp_path: Path, pdf: Path, payload: dict) -> StoredDocument:
@@ -360,43 +368,50 @@ def test_eeff_outside_recipe_periods_stays_empty(tmp_path: Path) -> None:
     assert extract_recipe(stored, comunicado_period) == ()
 
 
-def test_body_tables_come_from_iterate_items(tmp_path: Path) -> None:
+def test_body_tables_come_from_json_walk_not_iterate_items(tmp_path: Path) -> None:
     pdf = CORPUS / "BYMA_-_EEFF_31-03-2026_VF.pdf"
     poisoned = _recipe_grid("31.03.2026")
     for row in poisoned:
         if row[0]["text"] == "RESULTADO NETO DEL PERÍODO":
             row[2] = _cell("9.999.999")
+    furniture = _table(
+        "#/tables/0",
+        poisoned,
+        layer="furniture",
+        parent="#/furniture",
+    )
+    body = _table(
+        "#/tables/1",
+        _recipe_grid("31.03.2026"),
+        layer="body",
+        parent="#/groups/0",
+    )
+    nested_group = {
+        "self_ref": "#/groups/0",
+        "content_layer": "body",
+        "parent": {"$ref": "#/body"},
+        "children": [{"$ref": "#/tables/1"}],
+    }
     stored = _stored(
         tmp_path,
         pdf,
         _document(
-            body_tables=[
-                _table(
-                    "#/tables/1",
-                    _recipe_grid("31.03.2026"),
-                    layer="body",
-                    parent="#/body",
-                )
-            ],
-            furniture_tables=[
-                _table(
-                    "#/tables/0",
-                    poisoned,
-                    layer="furniture",
-                    parent="#/furniture",
-                )
-            ],
+            body_tables=[body],
+            furniture_tables=[furniture],
+            body_children=[{"$ref": "#/groups/0"}],
+            groups=[nested_group],
         ),
     )
     document = DocumentClass(kind="eeff", issuer="BYMA", period=PERIOD_1T26)
 
     claims = extract_recipe(stored, document)
 
+    _assert_recipe_claims(claims, stored, PERIOD_1T26)
     assert FURNITURE_FIGURE not in {claim.value for claim in claims}
+    assert all(claim.evidence[0].document_id == "#/tables/1" for claim in claims)
     source = (INGEST_ROOT / "extract.py").read_text(encoding="utf-8")
-    assert "iterate_items" in source
-    assert "def _index_items" not in source
-    assert "def _ordered_items" not in source
+    assert "iterate_items" not in source
+    assert "DoclingDocument" not in source
 
 
 def test_extract_recipe_is_exported_from_ingest_package() -> None:
@@ -408,7 +423,7 @@ def test_extract_recipe_is_exported_from_ingest_package() -> None:
 def test_extract_source_reads_grid_not_markdown() -> None:
     source = (INGEST_ROOT / "extract.py").read_text(encoding="utf-8")
     assert "export_to_markdown" not in source
-    assert "TableData" not in source or "grid" in source
+    assert "TableData" not in source
     assert ".grid" in source or '["grid"]' in source or "['grid']" in source
     assert "furniture" in source
 
@@ -436,17 +451,9 @@ def _table_from_cells(self_ref: str, grid: list[list[dict]]) -> dict:
     return table
 
 
-def test_cells_without_grid_match_stored_grid(tmp_path: Path) -> None:
+def test_cells_without_grid_raise_ingest_error(tmp_path: Path) -> None:
     pdf = CORPUS / "BYMA_-_EEFF_31-03-2026_VF.pdf"
     grid = _recipe_grid("31.03.2026")
-    with_grid = _stored(
-        tmp_path,
-        pdf,
-        _document(
-            body_tables=[_table("#/tables/0", grid, layer="body", parent="#/body")],
-            furniture_tables=[],
-        ),
-    )
     from_cells = _stored(
         tmp_path,
         pdf,
@@ -455,17 +462,46 @@ def test_cells_without_grid_match_stored_grid(tmp_path: Path) -> None:
             furniture_tables=[],
         ),
     )
+    empty_grid = _stored(
+        tmp_path,
+        pdf,
+        _document(
+            body_tables=[
+                _table(
+                    "#/tables/0",
+                    [],
+                    layer="body",
+                    parent="#/body",
+                )
+            ],
+            furniture_tables=[],
+        ),
+    )
+    # Empty list still writes data.grid=[]; rewrite to empty grid explicitly.
+    empty_payload = json.loads(empty_grid.json_path.read_text(encoding="utf-8"))
+    empty_payload["tables"][0]["data"] = {
+        "num_rows": 0,
+        "num_cols": 0,
+        "grid": [],
+        "table_cells": [],
+    }
+    empty_grid.json_path.write_text(
+        json.dumps(empty_payload, ensure_ascii=False), encoding="utf-8"
+    )
     document = DocumentClass(kind="eeff", issuer="BYMA", period=PERIOD_1T26)
 
-    def _slots(stored: StoredDocument) -> set[tuple[str, str, str]]:
-        return {
-            (claim.scope, claim.metric, claim.value)
-            for claim in extract_recipe(stored, document)
-        }
-
-    assert _slots(from_cells) == _slots(with_grid)
-    assert _slots(from_cells)
+    with pytest.raises(IngestError):
+        extract_recipe(from_cells, document)
+    with pytest.raises(IngestError):
+        extract_recipe(empty_grid, document)
 
     source = (INGEST_ROOT / "extract.py").read_text(encoding="utf-8")
-    assert "TableData" in source
+    assert "TableData" not in source
     assert "start_row_offset_idx" not in source
+
+
+def test_extract_source_bans_docling_torch_and_pin() -> None:
+    source = (INGEST_ROOT / "extract.py").read_text(encoding="utf-8")
+    lowered = source.casefold()
+    for token in _BANNED_EXTRACT_TOKENS:
+        assert token.casefold() not in lowered, f"banned token still present: {token}"
