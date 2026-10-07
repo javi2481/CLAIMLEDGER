@@ -25,6 +25,33 @@ _SENTENCE = "encontré estas dos filas; verifiqué la consolidada"
 _REASON = "filas copiadas"
 
 
+@pytest.fixture(autouse=True)
+def _stub_quarterly_book(monkeypatch: pytest.MonkeyPatch) -> None:
+    import claimledger.openwebui.reply as reply_mod
+    from claimledger.ledger import Ledger
+
+    monkeypatch.setattr(reply_mod, "recorded_book", Ledger.seed)
+
+
+def test_reply_uses_the_quarterly_book() -> None:
+    import ast
+
+    repo = Path(__file__).resolve().parents[2]
+    source = (repo / "src" / "claimledger" / "openwebui" / "reply.py").read_text(
+        encoding="utf-8"
+    )
+    tree = ast.parse(source)
+    calls = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Call)
+        and isinstance(node.func, ast.Name)
+        and node.func.id == "recorded_book"
+    ]
+    assert len(calls) == 1
+    assert "Ledger.seed" not in source
+
+
 def test_card_text_copies_fields() -> None:
     card = ClaimCard(
         seal=_SEAL,

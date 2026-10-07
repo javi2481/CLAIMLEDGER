@@ -57,6 +57,71 @@ KERNEL_MODULES = (
 _BANNED_PINS = ("fastapi", "flask", "uvicorn")
 
 
+@pytest.fixture(autouse=True)
+def _stub_quarterly_book(monkeypatch: pytest.MonkeyPatch) -> None:
+    import claimledger.ingest.ground as ground
+    from claimledger.ledger import Ledger
+
+    monkeypatch.setattr(ground, "recorded_book", Ledger.seed)
+
+
+def test_route_calls_recorded_book_not_seed() -> None:
+    source = (REPO_ROOT / "src" / "claimledger" / "http" / "app.py").read_text(
+        encoding="utf-8"
+    )
+    assert "recorded_book()" in source
+    assert "Ledger.seed" not in source
+
+
+def test_route_forwards_book_evidence(monkeypatch: pytest.MonkeyPatch) -> None:
+    import claimledger.ingest.ground as ground
+    from claimledger.claim import FinancialClaim
+    from claimledger.evidence import FinancialEvidence
+    from claimledger.identity import identity_key
+    from claimledger.ledger import Ledger
+
+    key = identity_key(
+        "BYMA", "2026-03-31", "income_statement", "consolidated", "net_income"
+    )
+    ledger = Ledger()
+    ledger.upsert(
+        FinancialClaim(
+            identity_key=key,
+            issuer="BYMA",
+            period="2026-03-31",
+            statement="income_statement",
+            scope="consolidated",
+            metric="net_income",
+            value="21262335",
+            currency="ARS",
+            unit=None,
+            evidence=(
+                FinancialEvidence(
+                    document_id="#/tables/1",
+                    artifact_hash="abc",
+                    page=4,
+                    text="21.262.335",
+                    label="RESULTADO NETO DEL PERÍODO",
+                ),
+            ),
+            ledger_status="recorded",
+        )
+    )
+    monkeypatch.setattr(ground, "recorded_book", lambda: ledger)
+
+    status, body, host, port = _request(
+        _build_app(),
+        "POST",
+        "/claims/query",
+        json={"question": ORDINARY_EEFF},
+    )
+    _assert_in_process(host, port)
+    assert status == 200
+    assert body["evidence"] == [
+        {"document_id": "#/tables/1", "page": 4, "text": "21.262.335"}
+    ]
+
+
 def _assigned_strings(tree: ast.AST, name: str) -> tuple[str, ...]:
     for node in tree.body:  # type: ignore[attr-defined]
         if not isinstance(node, ast.Assign):

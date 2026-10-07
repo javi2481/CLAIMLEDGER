@@ -62,6 +62,50 @@ def test_load_existing_artifact_by_canonical_hash(
     assert _sha256_hex(_canonical_json_bytes(loaded)) == digest
 
 
+def test_load_rejects_bytes_that_do_not_match_the_name(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    raw = _canonical_json_bytes({"kept": True})
+    digest = _sha256_hex(raw)
+    artifacts = tmp_path / "docling"
+    artifacts.mkdir()
+    (artifacts / f"{digest}.json").write_bytes(b'{"tampered":true}')
+    _use_artifacts(monkeypatch, artifacts)
+
+    with pytest.raises(IngestError):
+        load(digest)
+
+
+def test_cache_hit_rejects_mismatch_without_reconvert(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from docling_core.types.doc.document import DoclingDocument
+
+    pdf = tmp_path / "cached.pdf"
+    pdf.write_bytes(b"%PDF-1.4 cached")
+    honest = DoclingDocument(name="cached").export_to_dict()
+    digest = _sha256_hex(_canonical_json_bytes(honest))
+    other = _canonical_json_bytes(DoclingDocument(name="other").export_to_dict())
+    artifacts = tmp_path / "docling"
+    artifacts.mkdir()
+    (artifacts / f"{digest}.json").write_bytes(other)
+    pdf_sha = _sha256_hex(pdf.read_bytes())
+    (artifacts / "manifest.json").write_text(
+        json.dumps({pdf_sha: digest}),
+        encoding="utf-8",
+    )
+    _use_artifacts(monkeypatch, artifacts)
+
+    def boom(source: Path) -> dict:
+        raise AssertionError(f"reconvert of {source}")
+
+    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", boom)
+    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", boom)
+
+    with pytest.raises(IngestError):
+        load_or_convert(pdf)
+
+
 def test_load_second_artifact_is_a_different_document(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
@@ -268,6 +312,7 @@ def test_ingest_sources_forbid_url_httpsource_and_docling_graph() -> None:
         "__init__.py",
         "classify.py",
         "extract.py",
+        "ground.py",
         "parse.py",
         "store.py",
         "types.py",

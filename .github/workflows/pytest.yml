@@ -1,0 +1,31 @@
+name: pytest
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  pytest:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+          enable-cache: true
+
+      - name: Kernel and gold
+        run: |
+          uv sync --frozen --extra dev
+          uv run --no-sync pytest tests/test_identity.py tests/test_ledger.py tests/test_lookup.py tests/test_query.py tests/test_gold_v1.py tests/test_gold_v2.py
+
+      - name: Product tests without Docling
+        run: |
+          uv sync --frozen --extra dev --extra http
+          uv run --no-sync pytest tests/http tests/card tests/chart tests/period tests/orchestrate tests/book tests/eval
+
+      - name: Ingest, graph, and retrieval
+        run: |
+          uv sync --frozen --all-extras
+          uv run --no-sync pytest tests/ingest tests/graph tests/retrieval tests/crop tests/openwebui

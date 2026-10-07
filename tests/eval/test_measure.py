@@ -1,4 +1,4 @@
-"""Measure joins tables retrieve, understand, and query on seed."""
+"""Measure joins tables retrieve, understand, and query on a ledger."""
 
 from __future__ import annotations
 
@@ -149,6 +149,10 @@ def _import_measure():
     return measure_mod.measure, measure_mod
 
 
+def _book() -> ledger_mod.Ledger:
+    return ledger_mod.Ledger.seed()
+
+
 class _Calls:
     def __init__(self) -> None:
         self.order: list[str] = []
@@ -250,18 +254,50 @@ def test_slice1_call_order_and_both_neighbors(
 ) -> None:
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, measure_mod = _import_measure()
+    book = _book()
     seen = _spy_pipeline(monkeypatch, measure_mod)
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION)
+    candidates, result = measure(digest, CONSOLIDATED_QUESTION, book)
 
     assert seen.order == ["retrieve", "understand", "query"]
     assert seen.retrieve_args == [(digest, "tables", CONSOLIDATED_QUESTION)]
     assert seen.understand_args == [CONSOLIDATED_QUESTION]
     assert seen.query_intents == seen.intents
-    assert seen.ledgers == seen.seeded
-    assert len(seen.seeded) == 1
+    assert seen.ledgers == [book]
+    assert seen.seeded == []
     _assert_both_neighbors(candidates)
     assert isinstance(result, QueryResult)
+    _assert_quiet_io(io_calls)
+
+
+def test_measure_queries_the_passed_ledger_and_does_not_seed(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    digest, _io_calls = _prepare(tmp_path, monkeypatch)
+    measure, _measure_mod = _import_measure()
+    book = ledger_mod.Ledger.seed()
+    seen = _spy_pipeline(monkeypatch, _measure_mod)
+
+    measure(digest, CONSOLIDATED_QUESTION, book)
+
+    assert seen.ledgers == [book]
+    assert seen.seeded == []
+    assert "Ledger.seed" not in _repo_file("src/claimledger/eval/measure.py")
+
+
+def test_omitted_ledger_is_the_quarterly_book(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    digest, io_calls = _prepare(tmp_path, monkeypatch)
+    measure, measure_mod = _import_measure()
+    book = _book()
+    seen = _spy_pipeline(monkeypatch, measure_mod)
+    monkeypatch.setattr(measure_mod, "_quarterly_book", lambda: book)
+
+    measure(digest, CONSOLIDATED_QUESTION)
+
+    assert seen.ledgers == [book]
+    assert seen.seeded == []
     _assert_quiet_io(io_calls)
 
 
@@ -271,7 +307,7 @@ def test_slice1_consolidated_21262335(
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, _measure_mod = _import_measure()
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION)
+    candidates, result = measure(digest, CONSOLIDATED_QUESTION, _book())
 
     _assert_both_neighbors(candidates)
     _assert_recorded_value(result, CONSOLIDATED_VALUE, PARENT_VALUE)
@@ -284,7 +320,7 @@ def test_slice1_parent_21259769(
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, _measure_mod = _import_measure()
 
-    candidates, result = measure(digest, PARENT_QUESTION)
+    candidates, result = measure(digest, PARENT_QUESTION, _book())
 
     _assert_both_neighbors(candidates)
     _assert_recorded_value(result, PARENT_VALUE, CONSOLIDATED_VALUE)
@@ -296,12 +332,13 @@ def test_slice1_no_upsert_and_not_verified(
 ) -> None:
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, _measure_mod = _import_measure()
+    book = _book()
     upserts = _spy_upsert(monkeypatch)
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION)
+    candidates, result = measure(digest, CONSOLIDATED_QUESTION, book)
 
     assert len(RECIPE_ROWS) == SEED_UPSERTS
-    assert upserts["n"] == SEED_UPSERTS
+    assert upserts["n"] == 0
     assert len(candidates) == 2
     for candidate in candidates:
         assert isinstance(candidate, Candidate)
@@ -319,9 +356,10 @@ def test_slice1_retrieve_query_count_stays_zero(
 ) -> None:
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, measure_mod = _import_measure()
+    book = _book()
     seen = _spy_pipeline(monkeypatch, measure_mod)
 
-    measure(digest, PARENT_QUESTION)
+    measure(digest, PARENT_QUESTION, book)
 
     assert seen.query_inside_retrieve == 0
     assert seen.query_from_caller == 1
@@ -399,7 +437,7 @@ def test_slice2_recipe_no_extract_abstains(
     measure, _measure_mod = _import_measure()
 
     for question in RECIPE_QUESTIONS:
-        candidates, result = measure(digest, question)
+        candidates, result = measure(digest, question, _book())
 
         _assert_both_neighbors(candidates)
         assert any(CONSOLIDATED_VALUE in _digits(item.text) for item in candidates)
@@ -416,7 +454,7 @@ def test_slice2_compare_two_claims(
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, _measure_mod = _import_measure()
 
-    candidates, result = measure(digest, COMPARE_QUESTION)
+    candidates, result = measure(digest, COMPARE_QUESTION, _book())
 
     _assert_both_neighbors(candidates)
     assert result.status == "verified"
@@ -433,9 +471,10 @@ def test_slice2_narrative_not_number_source(
 ) -> None:
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, measure_mod = _import_measure()
+    book = _book()
     seen = _spy_pipeline(monkeypatch, measure_mod)
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION)
+    candidates, result = measure(digest, CONSOLIDATED_QUESTION, book)
 
     assert seen.retrieve_args == [(digest, "tables", CONSOLIDATED_QUESTION)]
     assert len(seen.retrieve_args) == 1
@@ -453,9 +492,10 @@ def test_slice2_empty_question_keeps_both_rows(
 ) -> None:
     digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, measure_mod = _import_measure()
+    book = _book()
     seen = _spy_pipeline(monkeypatch, measure_mod)
 
-    candidates, _result = measure(digest, "")
+    candidates, _result = measure(digest, "", book)
 
     assert seen.retrieve_args == [(digest, "tables", "")]
     _assert_both_neighbors(candidates)
@@ -472,7 +512,7 @@ def test_slice2_shared_ref_does_not_select(
         (CONSOLIDATED_QUESTION, CONSOLIDATED_VALUE, PARENT_VALUE),
         (PARENT_QUESTION, PARENT_VALUE, CONSOLIDATED_VALUE),
     ):
-        candidates, result = measure(digest, question)
+        candidates, result = measure(digest, question, _book())
         assert [item.ref for item in candidates] == ["#/tables/1", "#/tables/1"]
         _assert_both_neighbors(candidates)
         _assert_recorded_value(result, value, rejected)

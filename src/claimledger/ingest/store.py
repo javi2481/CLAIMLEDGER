@@ -114,7 +114,10 @@ def load(artifact_hash: str) -> dict:
     path = artifacts_dir() / f"{artifact_hash}.json"
     if not path.is_file():
         raise IngestError(f"missing artifact {artifact_hash}")
-    payload = json.loads(path.read_text(encoding="utf-8"))
+    raw = path.read_bytes()
+    if _sha256_hex(raw) != artifact_hash:
+        raise IngestError(f"artifact hash does not match {artifact_hash}")
+    payload = json.loads(raw)
     if not isinstance(payload, dict):
         raise IngestError("artifact JSON must be an object")
     return payload
@@ -133,6 +136,7 @@ def load_or_convert(pdf: Path) -> StoredDocument:
     if artifact_hash:
         json_path = root / f"{artifact_hash}.json"
         if json_path.is_file():
+            load(artifact_hash)
             if not _doclang_path(json_path).is_file():
                 cached = json.loads(json_path.read_text(encoding="utf-8"))
                 if not isinstance(cached, dict):

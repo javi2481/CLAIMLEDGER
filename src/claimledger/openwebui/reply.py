@@ -7,7 +7,7 @@ from claimledger.card.card import render_card
 from claimledger.chart.series import draw, series_spec
 from claimledger.crop.attach import attach
 from claimledger.eval.measure import measure
-from claimledger.ledger import Ledger
+from claimledger.ingest.ground import recorded_book
 from claimledger.openwebui.text import card_text
 from claimledger.orchestrate.plan import execute
 from claimledger.period.difference import difference
@@ -16,11 +16,12 @@ from claimledger.retrieval.drawers import Candidate, retrieve
 
 
 def reply(artifact_hash: str, question: str) -> str:
-    series = execute(question, Ledger.seed())
+    book = recorded_book()
+    series = execute(question, book)
     if series is None:
-        series = ask(question, Ledger.seed(), read_script())
+        series = ask(question, book, read_script())
     if series is None:
-        candidates, result = measure(artifact_hash, question)
+        candidates, result = measure(artifact_hash, question, book)
         gaps: tuple[str, ...] = ()
         subtracted = difference(result)
     else:
