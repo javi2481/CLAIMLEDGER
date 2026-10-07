@@ -2,7 +2,7 @@
 
 ## Purpose
 
-Slim Open WebUI draws one existing card. The host calls `measure` then `render_card`.
+Slim Open WebUI draws one existing card. The host calls `measure` then `render_card`. For a verified series it appends a Mermaid fence built from that result. For the last four quarters it runs the fixed plan, then that fence with holes. It does not calculate a bar height or a missing quarter.
 
 ## Requirements
 
@@ -28,6 +28,29 @@ The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist.
 - GIVEN a page-crop PNG is allowed
 - WHEN the host completes
 - THEN `card_text` MUST be first and that PNG MUST follow in the same completion
+
+#### Scenario: Compare completion draws the series
+
+- GIVEN a stubbed reader and “Comparar resultado neto consolidado 1T26 vs 2T26”
+- WHEN the host completes
+- THEN card text MUST come first
+- AND the Mermaid bar MUST be `bar [21262335, 81956525]`
+- AND `60694190` MUST remain on the card difference line and MUST NOT be a bar height
+
+#### Scenario: Single claim and abstain stay card-only
+
+- GIVEN a consolidated question or an abstaining question
+- WHEN the host completes
+- THEN the body MUST NOT contain a Mermaid fence
+
+#### Scenario: Last four quarters
+
+- GIVEN a stubbed reader and “Compará el resultado neto consolidado de los últimos 4 trimestres”
+- WHEN the host completes
+- THEN the body MUST start with the card
+- AND the bar line MUST be `bar [21262335, 81956525]`
+- AND the text MUST contain `Hueco: 2025-09-30` and `Hueco: 2025-12-31`
+- AND `60694190` MUST NOT appear
 
 ### Requirement: Always That Card
 
@@ -64,7 +87,7 @@ A missing or unreadable `artifact_hash` MUST NOT produce invented rows. A live v
 
 ### Requirement: Features Off
 
-The host MUST expose `GET /v1/models` and `POST /v1/chat/completions`. Assistant content MUST be the card text first, then a page-crop picture only when page-crop allows it, in that same completion. Titles, follow-ups, Knowledge, tools, MCP, Pipelines, Ollama, and Action buttons MUST stay off.
+The host MUST expose `GET /v1/models` and `POST /v1/chat/completions`. Assistant content MUST be the card text first, then a page-crop picture only when page-crop allows it, then a Mermaid fence only when a series spec exists, in that same completion. Titles, follow-ups, Knowledge, tools, MCP, Pipelines, Ollama, and Action buttons MUST stay off.
 
 #### Scenario: One card only
 
@@ -72,6 +95,7 @@ The host MUST expose `GET /v1/models` and `POST /v1/chat/completions`. Assistant
 - WHEN `POST /v1/chat/completions` runs
 - THEN assistant content MUST start with that single card text in one completion
 - AND a picture MAY follow only in that same completion
+- AND a Mermaid fence MAY follow only in that same completion
 - AND no title, follow-up, Knowledge, tool, or MCP text MUST appear
 
 #### Scenario: Models lists no card
@@ -99,6 +123,7 @@ The screen opened MUST be only `ghcr.io/open-webui/open-webui:v0.11.4-slim`. It 
 - GIVEN kernel tests and `pyproject.toml`
 - WHEN they run
 - THEN `dependencies` MUST be `[]` and the allowlist MUST stay 13 paths
+- AND no allowlist path MUST contain `chart` or `orchestrate`
 - AND kernel tests MUST NOT import `docling` or use Docker, network, or PDF
 
 #### Scenario: Later phases wait
