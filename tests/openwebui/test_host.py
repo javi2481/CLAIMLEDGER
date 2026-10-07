@@ -80,10 +80,11 @@ _CONSOLIDATED_QUESTION = (
 _PARENT_QUESTION = "resultado atribuible a la controlante 1T26"
 _ABSTAIN_QUESTION = "resultado neto del período en la memoria anual"
 _COMPARE_QUESTION = "Comparar resultado neto consolidado 1T26 vs 2T26"
+_SERIES_QUESTION = "Compará el resultado neto consolidado de los últimos 4 trimestres"
 _CONSOLIDATED_VALUE = "21262335"
 _PARENT_VALUE = "21259769"
 _SECOND_QUARTER_VALUE = "81956525"
-_COMPARE_DELTA = str(abs(int(_SECOND_QUARTER_VALUE) - int(_CONSOLIDATED_VALUE)))
+_DIFFERENCE_LINE = "Diferencia entre las dos cifras verificadas: 60694190"
 
 
 def _canonical_json_bytes(payload: dict) -> bytes:
@@ -217,29 +218,37 @@ def test_reply_abstain_adds_no_verified_value(
     assert "VERIFICADO" not in text
 
 
-def test_reply_compare_copies_both_values_without_delta(
+def test_reply_compare_copies_both_values_shows_code_difference(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     digest = _prepare_neighbors(tmp_path, monkeypatch)
 
     text = reply(digest, _COMPARE_QUESTION)
 
-    assert text == "\n".join(
-        (
-            "VERIFICADO",
-            "BYMA · 1T26 · Consolidado · Resultado neto",
-            "BYMA · 2T26 · Consolidado · Resultado neto",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
-            _CONSOLIDATED_VALUE,
-            _SECOND_QUARTER_VALUE,
-        )
-    )
+    assert text == _compare_card() + "\n" + _series_chart()
+    assert "60694190" not in text.split("```mermaid", 1)[1]
     assert _CONSOLIDATED_VALUE in text
     assert _SECOND_QUARTER_VALUE in text
-    assert _COMPARE_DELTA not in text
+    assert "60694190" in text
+    assert "+60694190" not in text
     assert "delta" not in text.casefold()
     assert f"{_SECOND_QUARTER_VALUE}-{_CONSOLIDATED_VALUE}" not in text
+
+
+def test_reply_last_four_quarters_leaves_holes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    digest = _prepare_neighbors(tmp_path, monkeypatch)
+
+    text = reply(digest, _SERIES_QUESTION)
+
+    assert text.startswith("VERIFICADO\n")
+    assert "bar [21262335, 81956525]" in text
+    assert "Hueco: 2025-09-30" in text
+    assert "Hueco: 2025-12-31" in text
+    assert "60694190" not in text
+    assert _CONSOLIDATED_VALUE in text
+    assert _SECOND_QUARTER_VALUE in text
 
 
 _PAGE = 10
@@ -399,6 +408,23 @@ def _compare_card() -> str:
             _NEIGHBOR_PARENT,
             _CONSOLIDATED_VALUE,
             _SECOND_QUARTER_VALUE,
+            _DIFFERENCE_LINE,
+        )
+    )
+
+
+def _series_chart() -> str:
+    return "\n".join(
+        (
+            "```mermaid",
+            "xychart-beta",
+            '    title "Resultado neto consolidado"',
+            '    x-axis ["1T26", "2T26"]',
+            '    y-axis "ARS" 21262335 --> 81956525',
+            "    bar [21262335, 81956525]",
+            "```",
+            "BYMA|2026-03-31|income_statement|consolidated|net_income",
+            "BYMA|2026-06-30|income_statement|consolidated|net_income",
         )
     )
 
@@ -436,6 +462,10 @@ def _picture_sources() -> list[Path]:
         root / "src" / "claimledger" / "crop" / "attach.py",
         root / "src" / "claimledger" / "crop" / "__init__.py",
         root / "src" / "claimledger" / "openwebui" / "reply.py",
+        root / "src" / "claimledger" / "period" / "difference.py",
+        root / "src" / "claimledger" / "period" / "__init__.py",
+        root / "src" / "claimledger" / "chart" / "series.py",
+        root / "src" / "claimledger" / "chart" / "__init__.py",
     ]
 
 
@@ -450,21 +480,26 @@ def test_reply_picture_follows_card(
 
     match = reply(digest, _CONSOLIDATED_QUESTION)
     assert match == _consolidated_card() + "\n" + earlier
+    assert "```mermaid" not in match
     assert match.startswith(_consolidated_card() + "\n")
     assert match.count("data:image/png;base64") == 1
     assert later not in match
+    assert _DIFFERENCE_LINE not in match
 
     abstain = reply(digest, _ABSTAIN_QUESTION)
     assert abstain == _abstain_card()
+    assert "```mermaid" not in abstain
     assert "data:image" not in abstain
     assert _CONSOLIDATED_VALUE not in abstain
     assert _PARENT_VALUE not in abstain
+    assert _DIFFERENCE_LINE not in abstain
 
     compare = reply(digest, _COMPARE_QUESTION)
-    assert compare == _compare_card() + "\n" + earlier + "\n" + later
+    assert compare == _compare_card() + "\n" + earlier + "\n" + later + "\n" + _series_chart()
+    assert "60694190" not in compare.split("```mermaid", 1)[1]
     card_only = compare.split("\n![crop]", 1)[0]
     assert card_only == _compare_card()
-    assert _COMPARE_DELTA not in card_only
+    assert "60694190" in card_only
     assert "delta" not in card_only.casefold()
     assert compare.count("data:image/png;base64") == 2
     assert _docling_modules() == before_docling
@@ -712,7 +747,10 @@ def test_wave_c_still_waits() -> None:
         if path.is_dir() and path.name != "__pycache__"
     }
     assert "crop" in packages
-    assert packages.isdisjoint({"chart", "charts", "orchestrator"})
+    assert "period" in packages
+    assert "chart" in packages
+    assert "orchestrate" in packages
+    assert packages.isdisjoint({"charts"})
 
     active = [
         path.name
@@ -722,8 +760,7 @@ def test_wave_c_still_waits() -> None:
     assert any((repo / "openspec" / "changes" / "archive").glob("*-fase-8-crop"))
     assert "fase-8-crop" not in active
     assert not any(
-        name.startswith(tuple(f"fase-{number}" for number in range(9, 14)))
-        for name in active
+        name.startswith(("fase-10", "fase-11")) for name in active
     )
 
 
@@ -795,6 +832,14 @@ def test_query_and_card_stay_picture_free() -> None:
         _CONSOLIDATED_VALUE,
         _SECOND_QUARTER_VALUE,
     ]
+    assert "60694190" not in compared_dump
+    assert "mermaid" not in compared_dump
+    series = claims_query({"question": _SERIES_QUESTION}, Ledger.seed())
+    series_dump = json.dumps(series)
+    assert "mermaid" not in series_dump
+    assert "xychart" not in series_dump
+    assert "60694190" not in series_dump
+    assert "xychart" not in compared_dump
     assert "image" not in compared_dump
     assert "bbox" not in compared_dump
     assert "data:image" not in compared_dump
@@ -815,7 +860,9 @@ def test_query_and_card_stay_picture_free() -> None:
         "values",
         "sentence",
         "reason",
+        "difference",
     }
+    assert card.difference == ""
     assert card.values == (_CONSOLIDATED_VALUE,)
     rendered = card_text(card)
     assert "data:image" not in rendered
@@ -833,8 +880,17 @@ def test_query_and_card_stay_picture_free() -> None:
     allowlist = _kernel_allowlist()
     assert len(allowlist) == 13
     assert not any("crop" in path for path in allowlist)
+    assert not any("period" in path for path in allowlist)
+    assert not any("chart" in path for path in allowlist)
+    assert not any("orchestrate" in path for path in allowlist)
     assert ("2026-03-31", "consolidated", "net_income", "21262335") in RECIPE_ROWS
     assert ("2026-03-31", "parent_attributable", "net_income", "21259769") in RECIPE_ROWS
     gold = (repo / "tests" / "test_gold_v1.py").read_text(encoding="utf-8")
     assert 'ID_01_VALUE = "21262335"' in gold
     assert '"21259769"' in gold
+    assert "60694190" not in gold
+    for extra_gold in (
+        repo / "tests" / "test_gold_v2.py",
+        repo / "tests" / "ingest" / "test_gold_compare.py",
+    ):
+        assert "60694190" not in extra_gold.read_text(encoding="utf-8")

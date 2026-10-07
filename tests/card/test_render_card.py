@@ -8,7 +8,7 @@ from pathlib import Path
 
 import pytest
 
-from claimledger.card.card import ClaimCard, render_card
+from claimledger.card.card import _METRIC_CHIP, ClaimCard, render_card
 from claimledger.claim import FinancialClaim
 from claimledger.identity import identity_key
 from claimledger.query import QueryResult
@@ -63,7 +63,17 @@ def _neighbor_rows() -> tuple[Candidate, Candidate]:
 
 def _visible(card: ClaimCard) -> str:
     reason = card.reason or ""
-    return " ".join((card.seal, card.sentence, reason, *card.chips, *card.rows, *card.values))
+    return " ".join(
+        (
+            card.seal,
+            card.sentence,
+            reason,
+            card.difference,
+            *card.chips,
+            *card.rows,
+            *card.values,
+        )
+    )
 
 
 def _kernel_scan_paths() -> tuple[str, ...]:
@@ -171,7 +181,7 @@ def test_recipe_no_extract_abstains() -> None:
     assert CONSOLIDATED_VALUE not in card.values
 
 
-def test_compare_shows_both_values_without_delta() -> None:
+def test_compare_shows_both_values_and_difference() -> None:
     earlier = _consolidated_claim()
     later = _claim("2026-06-30", "consolidated", COMPARE_VALUE)
     result = QueryResult(
@@ -180,15 +190,53 @@ def test_compare_shows_both_values_without_delta() -> None:
         identity="BYMA|*|income_statement|consolidated|net_income",
     )
 
-    card = render_card(_neighbor_rows(), result)
+    card = render_card(_neighbor_rows(), result, "60694190")
 
     assert card.values == (CONSOLIDATED_VALUE, COMPARE_VALUE)
     assert card.chips[1] == "BYMA · 2T26 · Consolidado · Resultado neto"
     assert "2026-06-30" not in card.chips[1]
+    assert card.difference == "Diferencia entre las dos cifras verificadas: 60694190"
+    assert "segundo trimestre" not in card.difference
+    assert "trimestre aislado" not in card.difference
+    assert "claims" not in card.difference
     assert "delta" not in {field.name for field in dataclasses.fields(ClaimCard)}
     assert not hasattr(card, "delta")
-    difference = str(int(COMPARE_VALUE) - int(CONSOLIDATED_VALUE))
-    assert difference not in _visible(card)
+    assert _METRIC_CHIP == {"net_income": "Resultado neto"}
+
+
+def test_compare_without_string_has_no_line() -> None:
+    earlier = _consolidated_claim()
+    later = _claim("2026-06-30", "consolidated", COMPARE_VALUE)
+    result = QueryResult(
+        status="verified",
+        claims=(earlier, later),
+        identity="BYMA|*|income_statement|consolidated|net_income",
+    )
+
+    for card in (
+        render_card(_neighbor_rows(), result),
+        render_card(_neighbor_rows(), result, None),
+    ):
+        assert card.difference == ""
+        assert card.values == (CONSOLIDATED_VALUE, COMPARE_VALUE)
+        assert "60694190" not in _visible(card)
+
+
+def test_abstain_and_single_ignore_passed_string() -> None:
+    claim = _consolidated_claim()
+    abstained = QueryResult(
+        status="abstained",
+        reason="recipe_no_extract",
+        claims=(claim,),
+    )
+    single = QueryResult(
+        status="verified", claims=(claim,), identity=claim.identity_key
+    )
+
+    for result in (abstained, single):
+        card = render_card(_neighbor_rows(), result, "60694190")
+        assert card.difference == ""
+        assert "60694190" not in _visible(card)
 
 
 def test_seal_follows_query_status_not_ledger_status() -> None:
@@ -254,6 +302,17 @@ def test_render_card_does_not_call_kernel(monkeypatch) -> None:
         for node in ast.walk(tree)
         if isinstance(node, ast.Call) and isinstance(node.func, ast.Attribute)
     )
+    imported = {
+        alias.name
+        for node in ast.walk(tree)
+        if isinstance(node, ast.Import)
+        for alias in node.names
+    }
+    imported.update(
+        node.module
+        for node in ast.walk(tree)
+        if isinstance(node, ast.ImportFrom) and node.module
+    )
 
     claim = _consolidated_claim()
     card = render_card(
@@ -263,7 +322,13 @@ def test_render_card_does_not_call_kernel(monkeypatch) -> None:
 
     assert card.seal == "VERIFICADO"
     assert calls == []
-    assert called.isdisjoint({"measure", "retrieve", "understand", "query", "upsert"})
+    assert called.isdisjoint(
+        {"measure", "retrieve", "understand", "query", "upsert", "difference"}
+    )
+    assert not any(
+        module == "claimledger.period" or module.startswith("claimledger.period.")
+        for module in imported
+    )
 
 
 def test_card_stays_off_kernel_allowlist() -> None:

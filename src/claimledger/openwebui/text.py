@@ -21,6 +21,8 @@ def card_text(card: ClaimCard) -> str:
     parts.extend(chip for chip in card.chips if chip)
     parts.extend(_ficha_rows(card.rows))
     parts.extend(value for value in card.values if value)
+    if card.difference:
+        parts.append(card.difference)
     if card.sentence:
         parts.append(card.sentence)
     if card.reason:

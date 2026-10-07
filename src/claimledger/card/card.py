@@ -19,6 +19,7 @@ _SENTENCE = {
     "consolidated": "encontré estas dos filas; verifiqué la consolidada",
     "parent_attributable": "encontré estas dos filas; verifiqué la controlante",
 }
+_DIFFERENCE_LABEL = "Diferencia entre las dos cifras verificadas"
 
 
 @dataclass(frozen=True)
@@ -29,10 +30,13 @@ class ClaimCard:
     values: tuple[str, ...]
     sentence: str
     reason: str | None
+    difference: str = ""
 
 
 def render_card(
-    candidates: tuple[Candidate, ...], result: QueryResult
+    candidates: tuple[Candidate, ...],
+    result: QueryResult,
+    difference: str | None = None,
 ) -> ClaimCard:
     rows = tuple(candidate.text for candidate in candidates)
     if result.status != "verified":
@@ -45,6 +49,9 @@ def render_card(
             reason=result.reason,
         )
     claim = result.claims[0] if len(result.claims) == 1 else None
+    line = ""
+    if difference and len(result.claims) == 2:
+        line = f"{_DIFFERENCE_LABEL}: {difference}"
     return ClaimCard(
         seal=_SEAL["verified"],
         chips=tuple(_chip(item) for item in result.claims),
@@ -52,6 +59,7 @@ def render_card(
         values=tuple(item.value for item in result.claims),
         sentence=_sentence(claim, rows),
         reason=result.reason,
+        difference=line,
     )
 
 
