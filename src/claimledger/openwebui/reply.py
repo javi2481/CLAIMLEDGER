@@ -1,7 +1,10 @@
-"""Return one card string from measure then render_card."""
+"""Return one card string from measure then render_card, then gated prose or template."""
 
 from __future__ import annotations
 
+from claimledger.agent.gate import gate_prose
+from claimledger.agent.loop import LoopOutcome, run as run_agent
+from claimledger.agent.template import ABSTENTION_TEMPLATE
 from claimledger.book.ask import ask, read_script
 from claimledger.card.card import render_card
 from claimledger.chart.series import draw, series_spec
@@ -29,7 +32,9 @@ def reply(artifact_hash: str, question: str) -> str:
         result = series.result
         gaps = series.gaps
         subtracted = None
-    return _body(artifact_hash, candidates, result, gaps, subtracted)
+    body = _body(artifact_hash, candidates, result, gaps, subtracted)
+    trailing = _agent_trailing(question, artifact_hash)
+    return f"{body}\n{trailing}"
 
 
 def _body(
@@ -44,3 +49,29 @@ def _body(
     body = text if not images else text + "\n" + "\n".join(images)
     chart = draw(series_spec(result, gaps=gaps))
     return body if not chart else body + "\n" + chart
+
+
+def _agent_trailing(question: str, artifact_hash: str) -> str:
+    outcome = run_agent(question, artifact_hash=artifact_hash)
+    return _gate_outcome(outcome, question=question, artifact_hash=artifact_hash)
+
+
+def _gate_outcome(
+    outcome: LoopOutcome,
+    *,
+    question: str,
+    artifact_hash: str,
+) -> str:
+    if outcome.abstained or not outcome.authorized_values:
+        return ABSTENTION_TEMPLATE
+
+    def regenerate() -> str:
+        again = run_agent(question, artifact_hash=artifact_hash)
+        return again.content
+
+    gated = gate_prose(
+        outcome.content,
+        outcome.authorized_values,
+        regenerate=regenerate,
+    )
+    return gated.text

@@ -11,10 +11,15 @@ from types import SimpleNamespace
 import pytest
 
 import claimledger.ingest.store as ingest_store
+from claimledger.agent.template import ABSTENTION_TEMPLATE
 from claimledger.card.card import ClaimCard
 from claimledger.ingest.types import IngestError
 from claimledger.openwebui.reply import reply
 from claimledger.openwebui.text import card_text
+
+
+def _with_agent_trailing(core: str) -> str:
+    return f"{core}\n{ABSTENTION_TEMPLATE}"
 
 _SEAL = "VERIFICADO"
 _CHIP = "BYMA · 1T26 · Consolidado · Resultado neto"
@@ -195,16 +200,20 @@ def test_reply_consolidated_21262335(
 
     text = reply(digest, _CONSOLIDATED_QUESTION)
 
-    assert text == "\n".join(
-        (
-            "VERIFICADO",
-            "BYMA · 1T26 · Consolidado · Resultado neto",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
-            _CONSOLIDATED_VALUE,
-            "encontré estas dos filas; verifiqué la consolidada",
+    assert text == _with_agent_trailing(
+        "\n".join(
+            (
+                "VERIFICADO",
+                "BYMA · 1T26 · Consolidado · Resultado neto",
+                _NEIGHBOR_CONSOLIDATED,
+                _NEIGHBOR_PARENT,
+                _CONSOLIDATED_VALUE,
+                "encontré estas dos filas; verifiqué la consolidada",
+            )
         )
     )
+    assert text.startswith("VERIFICADO\n")
+    assert text.endswith(ABSTENTION_TEMPLATE)
     assert _CONSOLIDATED_VALUE in text
     assert _PARENT_VALUE not in text
 
@@ -216,19 +225,22 @@ def test_reply_parent_21259769_both_rows(
 
     text = reply(digest, _PARENT_QUESTION)
 
-    assert text == "\n".join(
-        (
-            "VERIFICADO",
-            "BYMA · 1T26 · Controlante · Resultado neto",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
-            _PARENT_VALUE,
-            "encontré estas dos filas; verifiqué la controlante",
+    assert text == _with_agent_trailing(
+        "\n".join(
+            (
+                "VERIFICADO",
+                "BYMA · 1T26 · Controlante · Resultado neto",
+                _NEIGHBOR_CONSOLIDATED,
+                _NEIGHBOR_PARENT,
+                _PARENT_VALUE,
+                "encontré estas dos filas; verifiqué la controlante",
+            )
         )
     )
     assert _PARENT_VALUE in text
     assert _NEIGHBOR_CONSOLIDATED in text
     assert _NEIGHBOR_PARENT in text
+    assert text.endswith(ABSTENTION_TEMPLATE)
 
 
 def test_reply_abstain_adds_no_verified_value(
@@ -238,16 +250,20 @@ def test_reply_abstain_adds_no_verified_value(
 
     text = reply(digest, _ABSTAIN_QUESTION)
 
-    assert text == "\n".join(
-        (
-            "ME ABSTENGO",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
-            "recipe_no_extract",
+    assert text == _with_agent_trailing(
+        "\n".join(
+            (
+                "ME ABSTENGO",
+                _NEIGHBOR_CONSOLIDATED,
+                _NEIGHBOR_PARENT,
+                "recipe_no_extract",
+            )
         )
     )
+    assert text.startswith("ME ABSTENGO\n")
+    assert text.endswith(ABSTENTION_TEMPLATE)
     assert "ME ABSTENGO" in text
-    assert _CONSOLIDATED_VALUE not in text
+    assert _CONSOLIDATED_VALUE not in text.split(ABSTENTION_TEMPLATE)[0]
     assert _PARENT_VALUE not in text
     assert "VERIFICADO" not in text
 
@@ -259,8 +275,8 @@ def test_reply_compare_copies_both_values_shows_code_difference(
 
     text = reply(digest, _COMPARE_QUESTION)
 
-    assert text == _compare_card() + "\n" + _series_chart()
-    assert "60694190" not in text.split("```mermaid", 1)[1]
+    assert text == _with_agent_trailing(_compare_card() + "\n" + _series_chart())
+    assert "60694190" not in text.split("```mermaid", 1)[1].split(ABSTENTION_TEMPLATE)[0]
     assert _CONSOLIDATED_VALUE in text
     assert _SECOND_QUARTER_VALUE in text
     assert "60694190" in text
@@ -277,6 +293,7 @@ def test_reply_last_four_quarters_leaves_holes(
     text = reply(digest, _SERIES_QUESTION)
 
     assert text.startswith("VERIFICADO\n")
+    assert text.endswith(ABSTENTION_TEMPLATE)
     assert "bar [21262335, 81956525]" in text
     assert "Hueco: 2025-09-30" in text
     assert "Hueco: 2025-12-31" in text
@@ -298,6 +315,7 @@ def test_reply_all_net_results_draws_the_book(
     text = reply(digest, _BOOK_QUESTION)
 
     assert text.startswith("VERIFICADO\n")
+    assert text.endswith(ABSTENTION_TEMPLATE)
     assert "bar [21262335, 81956525]" in text
     assert "60694190" not in text
 
@@ -315,6 +333,7 @@ def test_reply_all_net_results_without_script_abstains(
     text = reply(digest, _BOOK_QUESTION)
 
     assert "ME ABSTENGO" in text
+    assert text.endswith(ABSTENTION_TEMPLATE)
     assert "81956525" not in text
     assert "```mermaid" not in text
 
@@ -547,24 +566,28 @@ def test_reply_picture_follows_card(
     assert "data:image/png;base64" in earlier
 
     match = reply(digest, _CONSOLIDATED_QUESTION)
-    assert match == _consolidated_card() + "\n" + earlier
+    assert match == _with_agent_trailing(_consolidated_card() + "\n" + earlier)
     assert "```mermaid" not in match
     assert match.startswith(_consolidated_card() + "\n")
+    assert match.endswith(ABSTENTION_TEMPLATE)
     assert match.count("data:image/png;base64") == 1
     assert later not in match
     assert _DIFFERENCE_LINE not in match
 
     abstain = reply(digest, _ABSTAIN_QUESTION)
-    assert abstain == _abstain_card()
+    assert abstain == _with_agent_trailing(_abstain_card())
+    assert abstain.endswith(ABSTENTION_TEMPLATE)
     assert "```mermaid" not in abstain
     assert "data:image" not in abstain
-    assert _CONSOLIDATED_VALUE not in abstain
+    assert _CONSOLIDATED_VALUE not in abstain.split(ABSTENTION_TEMPLATE)[0]
     assert _PARENT_VALUE not in abstain
     assert _DIFFERENCE_LINE not in abstain
 
     compare = reply(digest, _COMPARE_QUESTION)
-    assert compare == _compare_card() + "\n" + earlier + "\n" + later + "\n" + _series_chart()
-    assert "60694190" not in compare.split("```mermaid", 1)[1]
+    assert compare == _with_agent_trailing(
+        _compare_card() + "\n" + earlier + "\n" + later + "\n" + _series_chart()
+    )
+    assert "60694190" not in compare.split("```mermaid", 1)[1].split(ABSTENTION_TEMPLATE)[0]
     card_only = compare.split("\n![crop]", 1)[0]
     assert card_only == _compare_card()
     assert "60694190" in card_only
@@ -787,6 +810,7 @@ def test_compose_pins_slim_screen() -> None:
     assert "claimledger.openwebui.app:build_host" in compose
     assert "--factory" in compose
     assert "CLAIMLEDGER_ARTIFACT_HASH" in compose
+    assert "DEEPSEEK_API_KEY" in compose
     assert "http://claimledger:8000/v1" in compose
     assert "OPENAI_API_KEYS=claimledger" in compose or "OPENAI_API_KEYS: claimledger" in compose
     assert "ENABLE_OPENAI_API=true" in compose or "ENABLE_OPENAI_API: \"true\"" in compose or "ENABLE_OPENAI_API: true" in compose
@@ -819,6 +843,7 @@ def test_wave_c_still_waits() -> None:
     assert "chart" in packages
     assert "orchestrate" in packages
     assert "book" in packages
+    assert "agent" in packages
     assert packages.isdisjoint({"charts"})
 
     active = [
@@ -958,6 +983,7 @@ def test_query_and_card_stay_picture_free() -> None:
     assert not any("chart" in path for path in allowlist)
     assert not any("orchestrate" in path for path in allowlist)
     assert not any("book" in path for path in allowlist)
+    assert not any("agent" in path for path in allowlist)
     assert ("2026-03-31", "consolidated", "net_income", "21262335") in RECIPE_ROWS
     assert ("2026-03-31", "parent_attributable", "net_income", "21259769") in RECIPE_ROWS
     gold = (repo / "tests" / "test_gold_v1.py").read_text(encoding="utf-8")
@@ -969,3 +995,80 @@ def test_query_and_card_stay_picture_free() -> None:
         repo / "tests" / "ingest" / "test_gold_compare.py",
     ):
         assert "60694190" not in extra_gold.read_text(encoding="utf-8")
+
+
+def test_card_first_then_abstention_template(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    digest = _prepare_neighbors(tmp_path, monkeypatch)
+    monkeypatch.delenv("DEEPSEEK_API_KEY", raising=False)
+
+    text = reply(digest, _CONSOLIDATED_QUESTION)
+
+    card = _consolidated_card()
+    assert text.startswith(card)
+    assert text == _with_agent_trailing(card)
+    assert text.index(card) == 0
+    assert text.rindex(ABSTENTION_TEMPLATE) > 0
+
+
+def test_card_first_then_gated_prose(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from claimledger.agent.loop import LoopOutcome
+
+    digest = _prepare_neighbors(tmp_path, monkeypatch)
+    prose = "El resultado neto consolidado verificado es 21.262.335."
+
+    monkeypatch.setattr(
+        "claimledger.openwebui.reply.run_agent",
+        lambda question, artifact_hash="": LoopOutcome(
+            abstained=False,
+            content=prose,
+            tool_results=[
+                {
+                    "status": "verified",
+                    "claims": [],
+                    "authorized_values": [_CONSOLIDATED_VALUE],
+                }
+            ],
+            authorized_values=[_CONSOLIDATED_VALUE],
+        ),
+    )
+
+    text = reply(digest, _CONSOLIDATED_QUESTION)
+
+    assert text.startswith(_consolidated_card())
+    assert text.endswith(prose)
+    assert ABSTENTION_TEMPLATE not in text
+    assert text == _consolidated_card() + "\n" + prose
+
+
+def test_host_does_not_let_llm_authorize_gold(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    from claimledger.agent.loop import LoopOutcome
+
+    digest = _prepare_neighbors(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "claimledger.openwebui.reply.run_agent",
+        lambda question, artifact_hash="": LoopOutcome(
+            abstained=False,
+            content="Autorizo por mi cuenta 99999999.",
+            tool_results=[],
+            authorized_values=[_CONSOLIDATED_VALUE],
+        ),
+    )
+
+    text = reply(digest, _CONSOLIDATED_QUESTION)
+
+    assert text.startswith(_consolidated_card())
+    assert text.endswith(ABSTENTION_TEMPLATE)
+    assert "99999999" not in text
+
+
+def test_env_example_documents_deepseek_key() -> None:
+    repo = Path(__file__).resolve().parents[2]
+    example = (repo / ".env.example").read_text(encoding="utf-8")
+    assert "DEEPSEEK_API_KEY=" in example
+    assert ".env" in example.casefold() or "commit" in example.casefold()

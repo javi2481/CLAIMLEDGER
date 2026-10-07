@@ -1,14 +1,11 @@
-# Open WebUI Host Specification
+# Delta for Open WebUI Host
 
-## Purpose
-
-Slim Open WebUI draws one existing card. The host calls `measure` then `render_card`. For a verified series it appends a Mermaid fence built from that result. For the last four quarters it runs the fixed plan, then that fence with holes. For every net result of BYMA it reads the Cypher script, verifies each period, and appends that fence. It does not calculate a bar height or a missing quarter. After card/pictures/fence, the host may append agent-host-gated prose or the controlled abstention template.
-
-## Requirements
+## MODIFIED Requirements
 
 ### Requirement: Measure Then Card
 
 The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist. It MUST call `recorded_book()` once per completion and pass that same ledger to `execute`, `ask`, and `measure`. It MUST NOT call `Ledger.seed()`. It MUST call `measure(artifact_hash, question, ledger)` then `render_card`. For a compare result it MAY call the difference function on that same `QueryResult` and pass the string to `render_card`; it MUST NOT calculate the number itself. `card_text` MUST stay first and remain exactly that card: seal, chips, ordered rows, kernel values, difference line only when the card set it, and any sentence the card set. A page-crop PNG MAY follow. When the result is a verified series, a Mermaid fence from `draw(series_spec(result))` MUST follow card/pictures. Last-four-quarters MUST go through `execute` (fence with holes; no two-figure difference line). Every net result of BYMA MUST go through `ask` when the script has periods (fence copies verified values; no two-figure difference line); without a script it MUST abstain. After card/pictures/fence, the host MAY append agent-host-gated prose when authorization exists, or MUST append the controlled abstention template when authorization is empty or the gate falls through. Host MUST enforce authorization via verified claims/`authorized_values`; prompt MUST NOT be enforcement. Host MUST NOT let an LLM authorize `21262335`, `21259769`, the difference, or a bar height. `POST /claims/query` MUST stay the only product route (no candidates, no `delta`, no fence). Host tests MAY stub `recorded_book`.
+(Previously: card-only; host MUST NOT parse digits or let an LLM choose gold figures.)
 
 #### Scenario: Consolidated value
 
@@ -73,6 +70,7 @@ The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist.
 ### Requirement: Always That Card
 
 One completion MUST start with exactly one `card_text` from `render_card`, including seal `ME ABSTENGO` and compare cards with both claims and, when produced, “Diferencia entre las dos cifras verificadas”. A page-crop MAY follow. Host-gated verified prose or the controlled abstention template MAY follow after card/pictures/fence in the same completion. A second chat message MUST NOT appear before or after the card.
+(Previously: abstain card was the whole body; no post-card text.)
 
 #### Scenario: Abstain keeps card then template
 
@@ -86,25 +84,10 @@ One completion MUST start with exactly one `card_text` from `render_card`, inclu
 - WHEN host completes
 - THEN card first with `21262335`, `81956525`, and “Diferencia entre las dos cifras verificadas” + `60694190`; pictures MAY follow in claim order
 
-### Requirement: No Invented Rows
-
-A missing or unreadable `artifact_hash` MUST NOT produce invented rows. A live verified card MUST require a configured hash. Pytest MUST stub the reader. Gitignored artifacts MUST NOT be committed.
-
-#### Scenario: Unreadable hash
-
-- GIVEN no readable `artifact_hash`
-- WHEN a card is requested
-- THEN no row text and no kernel value MUST be invented
-
-#### Scenario: Stubbed reader
-
-- GIVEN host tests
-- WHEN pytest runs
-- THEN the reader MUST be stubbed and gitignored artifacts MUST stay uncommitted
-
 ### Requirement: Features Off
 
 Host MUST expose `GET /v1/models` and `POST /v1/chat/completions`. Assistant content MUST be card first, then optional page-crop, then optional Mermaid fence, then gated prose or controlled abstention template, in one completion. Titles, follow-ups, Knowledge, Open WebUI tools, MCP, Pipelines, Ollama, and Action buttons MUST stay off. The CLAIMLEDGER agent loop MUST run inside the host, not as Open WebUI tools/Pipelines.
+(Previously: content ended at card/picture/fence.)
 
 #### Scenario: One card only
 
@@ -118,19 +101,10 @@ Host MUST expose `GET /v1/models` and `POST /v1/chat/completions`. Assistant con
 - WHEN `GET /v1/models` runs
 - THEN it answers and MUST NOT return a card
 
-### Requirement: Slim Screen
-
-The screen opened MUST be only `ghcr.io/open-webui/open-webui:v0.11.4-slim`. It MUST NOT be `latest` or `main`. `manual/ui.py` MAY remain and MUST NOT be that screen.
-
-#### Scenario: Pinned slim image
-
-- GIVEN compose
-- WHEN the image is read
-- THEN it MUST be `ghcr.io/open-webui/open-webui:v0.11.4-slim`
-
 ### Requirement: Closed Bounds
 
 `dependencies` MUST stay `[]`. HTTP extra pin MUST stay `starlette==1.0.0`. Optional DeepSeek HTTP client extra MAY be pinned. 13-path allowlist and empty `src/claimledger/__init__.py` MUST stay. `chart/`, `orchestrate/`, `book/`, and `agent/` MUST stay off the allowlist. Gold MUST stay `21262335` and `21259769`; `cp-*` pairs unchanged. Kernel tests MUST NOT import `docling` or use Docker/network/PDF. Host/agent tests in-process, no bound port/Docker; DeepSeek mocked; search MAY be stubbed. `DEEPSEEK_API_KEY` MUST come from `.env` into claimledger only and MUST NEVER be committed. Phase 10 MUST NOT start. `http-query` and `gold-regression` unchanged.
+(Previously: no `agent/`; no DeepSeek env/extra.)
 
 #### Scenario: Allowlist and kernel bans
 

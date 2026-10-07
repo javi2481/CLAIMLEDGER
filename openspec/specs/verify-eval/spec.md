@@ -24,13 +24,20 @@ The caller MUST live in `src/claimledger/eval/` with tests in `tests/eval/`, out
 
 ### Requirement: Call Order
 
-A number question MUST call `retrieve(artifact_hash, "tables", question)`, then `understand(question)`, then `query(intent, Ledger.seed())`. The question MUST NOT drop a row. Identity MUST come from `understand` and MUST NOT be parsed from candidate text.
+A number question MUST call `retrieve(artifact_hash, "tables", question)`, then `understand(question)`, then `query` on the ledger the caller passed. When no ledger is passed, that ledger MUST be `recorded_book()`. The caller MUST NOT call `Ledger.seed()`. The question MUST NOT drop a row. Identity MUST come from `understand` and MUST NOT be parsed from candidate text. Tests that pass a ledger MUST NOT open a PDF.
 
 #### Scenario: Retrieve, then understand, then query
 
-- GIVEN an artifact hash and a number question
+- GIVEN an artifact hash, a number question, and an explicit ledger
 - WHEN the caller runs
-- THEN the order MUST be `retrieve(artifact_hash, "tables", question)`, then `understand(question)`, then `query(intent, Ledger.seed())`
+- THEN the order MUST be `retrieve(artifact_hash, "tables", question)`, then `understand(question)`, then `query` on that same ledger
+- AND `Ledger.seed()` MUST NOT be called
+
+#### Scenario: Omitted ledger is the quarterly book
+
+- GIVEN an artifact hash and a number question, and no ledger argument
+- WHEN the caller runs
+- THEN `query` MUST receive the ledger from `recorded_book()`
 
 #### Scenario: Question does not drop a row
 
@@ -72,11 +79,11 @@ A `recipe_no_extract` question about memoria, comunicado, deck, or contrato MUST
 
 ### Requirement: Compare Without Subtraction
 
-Compare MUST return two claims and `measure` MUST NOT subtract. The order MUST stay `retrieve`, then `understand`, then `query(Ledger.seed())`. The difference MUST live outside `measure`, in the sibling difference function; `measure` MUST NOT call it.
+Compare MUST return two claims and `measure` MUST NOT subtract. The order MUST stay `retrieve`, then `understand`, then `query` on the ledger the caller passed. The difference MUST live outside `measure`, in the sibling difference function; `measure` MUST NOT call it. `measure` MUST NOT call `Ledger.seed()`.
 
 #### Scenario: Compare stays two claims
 
-- GIVEN `Ledger.seed()` and “Comparar resultado neto consolidado 1T26 vs 2T26”
+- GIVEN `Ledger.seed()` passed as the ledger and “Comparar resultado neto consolidado 1T26 vs 2T26”
 - WHEN the caller runs
 - THEN verified claims MUST be `21262335` and `81956525`, and no subtracted difference MUST be returned
 - AND `60694190` MUST NOT appear in what `measure` returns
@@ -85,7 +92,7 @@ Compare MUST return two claims and `measure` MUST NOT subtract. The order MUST s
 
 - GIVEN the caller module
 - WHEN its imports and calls are read
-- THEN it MUST NOT import or call the difference function, and tests MUST NOT import `docling` or use network, PDF, or Docker
+- THEN it MUST NOT import or call the difference function, and tests that pass a ledger MUST NOT import `docling` or use network, PDF, or Docker
 
 ### Requirement: One Tables Drawer
 

@@ -68,7 +68,7 @@ Delete `ingest/ground.py` and its tests. Restore `Ledger.seed()` in `measure`, `
 
 ## Success Criteria
 
-- [ ] A product question verifies `21262335` from the quarterly book, with evidence, and `Ledger.seed()` is not called on that path.
-- [ ] `claims_query` on `Ledger.seed()` still returns `evidence: []`.
-- [ ] A mismatched artifact hash is rejected and not reconverted.
-- [ ] Kernel tests still call `query` on `Ledger.seed()` and do not import `docling`.
+- [x] A product question verifies `21262335` from the quarterly book, with evidence, and `Ledger.seed()` is not called on that path.
+- [x] `claims_query` on `Ledger.seed()` still returns `evidence: []`.
+- [x] A mismatched artifact hash is rejected and not reconverted.
+- [x] Kernel tests still call `query` on `Ledger.seed()` and do not import `docling`.

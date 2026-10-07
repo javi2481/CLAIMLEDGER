@@ -25,6 +25,9 @@ retrieval = [
 http = [
     "starlette==1.0.0",
 ]
+deepseek = [
+    "httpx==0.28.1",
+]
 
 [tool.setuptools.packages.find]
 where = ["src"]
