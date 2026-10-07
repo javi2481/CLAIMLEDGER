@@ -719,7 +719,8 @@ def test_wave_c_still_waits() -> None:
         for path in (repo / "openspec" / "changes").iterdir()
         if path.is_dir() and path.name != "archive"
     ]
-    assert "fase-8-crop" in active
+    assert any((repo / "openspec" / "changes" / "archive").glob("*-fase-8-crop"))
+    assert "fase-8-crop" not in active
     assert not any(
         name.startswith(tuple(f"fase-{number}" for number in range(9, 14)))
         for name in active

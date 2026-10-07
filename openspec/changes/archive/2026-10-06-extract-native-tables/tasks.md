@@ -29,4 +29,4 @@ Decision needed before apply: No
 
 ## Out of this apply
 
-- [ ] 3.1 Do not edit `_recipe_slot`, `_value_column`, `_normalize_bbox`, the ledger, the card, the crop, the graph, or the drawers.
+- [x] 3.1 Do not edit `_recipe_slot`, `_value_column`, `_normalize_bbox`, the ledger, the card, the crop, the graph, or the drawers.

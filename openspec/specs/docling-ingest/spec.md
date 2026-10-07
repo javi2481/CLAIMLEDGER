@@ -65,3 +65,87 @@ At conversion, each page PNG MUST be written as a sidecar beside `artifacts/docl
 - WHEN pytest runs
 - THEN it MUST use a synthetic payload
 - AND it MUST NOT import `docling`, open a PDF, use the network, or start Docker
+
+### Requirement: DocLang Sidecar On Every Parse
+
+Every successful persist of `artifacts/docling/<artifact_hash>.json` MUST also write `artifacts/docling/<artifact_hash>.dclg`. The `.dclg` body MUST be `DoclingDocument.export_to_doclang()` of that same JSON payload. The write MUST happen inside `load_or_convert`, both when `convert_pdf` runs and when a cached JSON has no sidecar yet. A cached JSON that already has the sidecar MUST NOT call `convert_pdf`. `artifact_hash` MUST remain the digest of `canonical_json_bytes` and MUST NOT include the `.dclg` bytes. DocLang MUST NOT be the source read by retrieval or by Claim Query. Markdown MUST NOT be written as a substitute.
+
+#### Scenario: Fresh convert writes JSON and DocLang
+
+- GIVEN a local PDF with no artifact
+- WHEN `load_or_convert` converts it
+- THEN `artifacts/docling/<artifact_hash>.json` MUST exist
+- AND `artifacts/docling/<artifact_hash>.dclg` MUST exist
+- AND the `.dclg` text MUST equal `export_to_doclang()` of that JSON
+- AND `artifact_hash` MUST equal the hash of the canonical JSON bytes
+
+#### Scenario: Cached JSON gains DocLang without reconvert
+
+- GIVEN a hashed JSON and a manifest entry, and no `.dclg` beside it
+- WHEN `load_or_convert` is called for that same local PDF
+- THEN the sidecar MUST be written from the stored JSON
+- AND `convert_pdf` MUST NOT run
+- AND the artifact hash MUST stay the same
+
+#### Scenario: Second call is a no-op
+
+- GIVEN JSON and `.dclg` already stored for a PDF
+- WHEN `load_or_convert` runs again
+- THEN `convert_pdf` MUST NOT run
+- AND both files MUST stay in place
+
+### Requirement: Corpus Pass Covers Every Sample PDF
+
+An explicit corpus pass MUST call `load_or_convert` once for every PDF in `docs/archivos_muestra` (the ten BYMA files). Each file MUST end with a manifest entry, a hashed JSON, and a `.dclg` sibling. The pass MUST be local. It MUST NOT fetch a URL. It MUST NOT extract recipe claims from comunicado, deck, memoria, or transcript files. Default kernel pytest MUST NOT import `docling`, open those PDFs, or run this pass. This pass closes phase 1. It is not phase 8 and it does not open phase 9.
+
+#### Scenario: Ten local files are stored
+
+- GIVEN the ten PDFs in `docs/archivos_muestra`
+- WHEN the corpus pass finishes
+- THEN each PDF sha256 MUST map to an artifact hash in `artifacts/docling/manifest.json`
+- AND both `<artifact_hash>.json` and `<artifact_hash>.dclg` MUST exist
+
+#### Scenario: Existing quarterly JSON is not reconverted
+
+- GIVEN the 1T26 and 2T26 EEFF artifacts already stored
+- WHEN the corpus pass runs
+- THEN those artifact hashes MUST be unchanged
+- AND only a missing `.dclg` MUST be added
+
+#### Scenario: Default pytest does not convert the corpus
+
+- GIVEN the kernel test suite
+- WHEN `pytest` runs without the corpus pass
+- THEN it MUST NOT import `docling`
+- AND it MUST NOT open a PDF from `docs/archivos_muestra`
+
+### Requirement: Native Table Grid and Body List
+
+`extract_recipe` MUST read each table grid from the grid Docling already stored on that table. When that grid is absent and cells are present, it MUST obtain the grid from `TableData.grid` in the `docling==2.130.0` install. It MUST NOT keep a second span expansion. The list of body tables MUST come from `DoclingDocument.iterate_items` on that same install, with that method's default content layers. Furniture MUST stay out of the recipe. The function MUST still decide which table is the consolidated income statement, which column is the quarter, and which row is a recipe slot. It MUST NOT import `docling` at module level. Kernel tests MUST NOT import `docling`. Gold numbers MUST NOT change.
+
+#### Scenario: Stored grid is used as saved
+
+- GIVEN a table whose `data.grid` is already present
+- WHEN `extract_recipe` reads that table
+- THEN it MUST use that grid
+- AND it MUST NOT rebuild the grid from cell spans
+
+#### Scenario: Missing grid uses the library
+
+- GIVEN a table with `table_cells` and no `grid`
+- WHEN `extract_recipe` reads that table
+- THEN the grid MUST be `TableData.grid` from the pinned install
+
+#### Scenario: Body list skips furniture
+
+- GIVEN a furniture table and a body table in one document
+- WHEN `extract_recipe` lists tables
+- THEN only the body table MAY yield a recipe claim
+- AND the list MUST come from `iterate_items`
+
+#### Scenario: Recipe choice stays local
+
+- GIVEN the body tables of a quarterly EEFF
+- WHEN a recipe claim is built
+- THEN the income-statement test, the quarter column, and the row slot MUST remain local code
+- AND the consolidated net income for 2026-03-31 MUST remain `21262335`

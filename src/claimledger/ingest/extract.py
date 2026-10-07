@@ -51,11 +51,18 @@ def extract_recipe(
     return tuple(found.values())
 
 
-def _body_tables(payload: dict[str, Any]) -> list[dict[str, Any]]:
-    """Body tables. iterate_items leaves furniture out by default."""
+def _load_pinned_docling() -> None:
+    # Docling imports NumPy before torch. On Windows that order fails c10.dll init.
+    import torch  # noqa: F401
+
     from claimledger.ingest.parse import _require_pinned_docling
 
     _require_pinned_docling()
+
+
+def _body_tables(payload: dict[str, Any]) -> list[dict[str, Any]]:
+    """Body tables. iterate_items leaves furniture out by default."""
+    _load_pinned_docling()
     from docling_core.types.doc.document import DoclingDocument, TableItem
 
     document = DoclingDocument.model_validate(payload)
@@ -84,9 +91,7 @@ def _table_grid(table: dict[str, Any]) -> list[list[dict[str, Any]]]:
 
 
 def _grid_from_table_data(data: dict[str, Any]) -> list[list[dict[str, Any]]]:
-    from claimledger.ingest.parse import _require_pinned_docling
-
-    _require_pinned_docling()
+    _load_pinned_docling()
     from docling_core.types.doc.document import TableData
 
     grid = TableData.model_validate(data).grid
