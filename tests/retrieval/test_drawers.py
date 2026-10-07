@@ -86,6 +86,7 @@ def _forbid_side_effects(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
     calls = {
         "load_or_convert": 0,
         "convert_pdf": 0,
+        "convert_local": 0,
         "urlopen": 0,
         "query": 0,
         "upsert": 0,
@@ -98,8 +99,15 @@ def _forbid_side_effects(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
         return _inner
 
     monkeypatch.setattr(ingest_store, "load_or_convert", _count("load_or_convert"))
-    monkeypatch.setattr(ingest_store, "convert_pdf", _count("convert_pdf"))
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", _count("convert_pdf"))
+    monkeypatch.setattr(
+        "claimledger.ingest.parse.convert_pdf", _count("convert_pdf")
+    )
+    monkeypatch.setattr(
+        "claimledger.ingest.parse.convert_local", _count("convert_local")
+    )
+    monkeypatch.setattr(
+        "claimledger.ingest.store.convert_local", _count("convert_local")
+    )
     monkeypatch.setattr("urllib.request.urlopen", _count("urlopen"))
     monkeypatch.setattr(query_mod, "query", _count("query"))
     monkeypatch.setattr(ledger_mod.Ledger, "upsert", _count("upsert"))
@@ -151,6 +159,7 @@ def test_tables_call_returns_no_narrative_nodes(
     assert calls["upsert"] == 0
     assert calls["load_or_convert"] == 0
     assert calls["convert_pdf"] == 0
+    assert calls["convert_local"] == 0
     assert calls["urlopen"] == 0
 
 

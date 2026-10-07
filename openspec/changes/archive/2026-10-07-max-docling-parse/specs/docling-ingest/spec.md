@@ -1,10 +1,6 @@
-# Docling-Ingest Specification
+# Delta for Docling-Ingest
 
-## Purpose
-
-Local corpus PDFs → hashed immutable DoclingDocument JSON. Markdown is not SoT. Convert is 100% via local docling-serve; CLAIMLEDGER hashes, stores, and verifies.
-
-## Requirements
+## ADDED Requirements
 
 ### Requirement: Docling-Serve Convert Only
 
@@ -58,9 +54,12 @@ Convert/store unit tests MUST mock HTTP/ZIP; MUST NOT network, open corpus PDFs,
 - WHEN default `pytest` runs
 - THEN HTTP mocked; no PDF/network/Docker
 
+## MODIFIED Requirements
+
 ### Requirement: In-Corpus Local PDFs
 
 Every PDF in `docs/archivos_muestra` MUST be in-corpus. Convert MUST be local via `convert_local` to docling-serve. MUST NOT fetch URL or use `/v1/convert/source`.
+(Previously: local convert without serve; URL ban only.)
 
 #### Scenario: Directory files are in corpus
 
@@ -77,6 +76,7 @@ Every PDF in `docs/archivos_muestra` MUST be in-corpus. Convert MUST be local vi
 ### Requirement: Hashed Immutable JSON Store
 
 Persist immutable JSON at `artifacts/docling/<sha256>.json`. Present hash MUST load without reconvert. Missing hash MUST `convert_local` and persist. Markdown MUST NOT be reconstruct SoT. `load` MUST recompute SHA-256 and reject mismatch. Cache hit MUST same-check and MUST NOT `convert_local` on mismatch.
+(Previously: named `convert_pdf`.)
 
 #### Scenario: Load or convert by hash
 
@@ -99,6 +99,7 @@ Persist immutable JSON at `artifacts/docling/<sha256>.json`. Present hash MUST l
 ### Requirement: Docling Pin Without Graph
 
 Compiler MUST be serve `v1.35.0` / slim `2.130.0` via `/version`. Convert MUST NOT import `docling-graph`. MinerU, convert-path VLM, Graph, LlamaIndex, UI MUST NOT serve convert. `extract_recipe` MAY use `docling_core` / `.[docling]` (removal OOS). Convert MAY HTTP to local serve; query MUST NOT.
+(Previously: in-process `docling==2.130.0`; HTTP banned.)
 
 #### Scenario: Pin and graph ban
 
@@ -115,6 +116,7 @@ Compiler MUST be serve `v1.35.0` / slim `2.130.0` via `/version`. Convert MUST N
 ### Requirement: Sidecar Page Raster Outside the Hash
 
 Page PNGs MUST come from ZIP (`image_export_mode=referenced`) beside `artifacts/docling/<artifact_hash>.json`, outside `canonical_json_bytes`. Hash digests JSON only; strip absorbed pixels before hash. No question-time re-rasterize. Missing sidecar leaves JSON unchanged. Unit tests: synthetic payload; no `docling`/PDF/network/Docker.
+(Previously: in-process PNGs; in-process pin required.)
 
 #### Scenario: Sidecar does not move the hash
 
@@ -137,6 +139,7 @@ Page PNGs MUST come from ZIP (`image_export_mode=referenced`) beside `artifacts/
 ### Requirement: DocLang Sidecar On Every Parse
 
 Persist MUST write `<artifact_hash>.dclg` from ZIP DocLang. MUST NOT use `export_to_doclang()`. Missing `.dclg` MUST recompile via `convert_local`. Cache hit with JSON+`.dclg` MUST NOT convert. Hash excludes `.dclg`. DocLang MUST NOT feed retrieval/Claim Query. Markdown MUST NOT substitute.
+(Previously: `.dclg`=`export_to_doclang()`; backfill without reconvert.)
 
 #### Scenario: Fresh convert writes JSON and DocLang
 
@@ -159,6 +162,7 @@ Persist MUST write `<artifact_hash>.dclg` from ZIP DocLang. MUST NOT use `export
 ### Requirement: Corpus Pass Covers Every Sample PDF
 
 Pass MUST `load_or_convert` once per PDF in `docs/archivos_muestra` (ten BYMA). Each MUST have manifest, hashed JSON, compiler `.dclg`. Local via serve; no URL; no recipe from comunicado/deck/memoria/transcript. Default kernel pytest: no `docling`, no those PDFs, no pass. Closes phase 1; not 8/9.
+(Previously: embedded convert; missing `.dclg` without reconvert.)
 
 #### Scenario: Ten local files are stored
 
@@ -177,53 +181,3 @@ Pass MUST `load_or_convert` once per PDF in `docs/archivos_muestra` (ten BYMA). 
 - GIVEN kernel suite
 - WHEN `pytest` without corpus pass
 - THEN no `docling` import; no PDF from `docs/archivos_muestra`
-
-### Requirement: Native Table Grid and Body List
-
-`extract_recipe` MUST read each table grid from the grid Docling already stored on that table. When that grid is absent and cells are present, it MUST obtain the grid from `TableData.grid` in the `docling==2.130.0` install. It MUST NOT keep a second span expansion. The list of body tables MUST come from `DoclingDocument.iterate_items` on that same install, with that method's default content layers. Furniture MUST stay out of the recipe. The function MUST still decide which table is the consolidated income statement, which column is the quarter, and which row is a recipe slot. It MUST NOT import `docling` at module level. Kernel tests MUST NOT import `docling`. Gold numbers MUST NOT change.
-
-#### Scenario: Stored grid is used as saved
-
-- GIVEN a table whose `data.grid` is already present
-- WHEN `extract_recipe` reads that table
-- THEN it MUST use that grid
-- AND it MUST NOT rebuild the grid from cell spans
-
-#### Scenario: Missing grid uses the library
-
-- GIVEN a table with `table_cells` and no `grid`
-- WHEN `extract_recipe` reads that table
-- THEN the grid MUST be `TableData.grid` from the pinned install
-
-#### Scenario: Body list skips furniture
-
-- GIVEN a furniture table and a body table in one document
-- WHEN `extract_recipe` lists tables
-- THEN only the body table MAY yield a recipe claim
-- AND the list MUST come from `iterate_items`
-
-#### Scenario: Recipe choice stays local
-
-- GIVEN the body tables of a quarterly EEFF
-- WHEN a recipe claim is built
-- THEN the income-statement test, the quarter column, and the row slot MUST remain local code
-- AND the consolidated net income for 2026-03-31 MUST remain `21262335`
-
-### Requirement: Quarterly Book
-
-The product book MUST be built by `recorded_book` in `src/claimledger/ingest/`, outside the seven kernel modules. It MUST `load_or_convert`, `classify`, and `extract_recipe` the two quarterly EEFF in `docs/archivos_muestra`, then `upsert` those claims into a new in-memory `Ledger`. It MUST NOT write a claim cache to disk. It MUST NOT call `Ledger.seed()`. A missing quarterly file MUST raise `IngestError`. Kernel tests MUST keep calling `query` on `Ledger.seed()` and MUST NOT import `docling`.
-
-#### Scenario: Fourteen rows with evidence
-
-- GIVEN the two quarterly EEFF files
-- WHEN `recorded_book` runs
-- THEN the book MUST hold the fourteen recipe values, including `21262335` and `21259769`
-- AND each claim MUST have evidence
-- AND `query` on that book for consolidated 1T26 net income MUST verify `21262335`
-
-#### Scenario: Missing file
-
-- GIVEN one quarterly EEFF file is absent
-- WHEN `recorded_book` runs
-- THEN it MUST raise `IngestError`
-- AND it MUST NOT return `Ledger.seed()`

@@ -116,7 +116,7 @@ def _install_parsed_reader(monkeypatch: pytest.MonkeyPatch) -> None:
 
 
 def _forbid_io(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
-    calls = {"load_or_convert": 0, "convert_pdf": 0, "urlopen": 0}
+    calls = {"load_or_convert": 0, "convert_pdf": 0, "convert_local": 0, "urlopen": 0}
 
     def _count(key: str):
         def _inner(*_args: object, **_kwargs: object) -> None:
@@ -125,8 +125,15 @@ def _forbid_io(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
         return _inner
 
     monkeypatch.setattr(ingest_store, "load_or_convert", _count("load_or_convert"))
-    monkeypatch.setattr(ingest_store, "convert_pdf", _count("convert_pdf"))
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", _count("convert_pdf"))
+    monkeypatch.setattr(
+        "claimledger.ingest.parse.convert_pdf", _count("convert_pdf")
+    )
+    monkeypatch.setattr(
+        "claimledger.ingest.parse.convert_local", _count("convert_local")
+    )
+    monkeypatch.setattr(
+        "claimledger.ingest.store.convert_local", _count("convert_local")
+    )
     monkeypatch.setattr("urllib.request.urlopen", _count("urlopen"))
     return calls
 
@@ -234,6 +241,7 @@ def _spy_upsert(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
 def _assert_quiet_io(io_calls: dict[str, int]) -> None:
     assert io_calls["load_or_convert"] == 0
     assert io_calls["convert_pdf"] == 0
+    assert io_calls["convert_local"] == 0
     assert io_calls["urlopen"] == 0
 
 

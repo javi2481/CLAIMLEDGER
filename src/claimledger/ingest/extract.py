@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from importlib.metadata import version
 from typing import Any
 
 from claimledger.claim import FinancialClaim
@@ -12,6 +13,8 @@ from claimledger.identity import PERIOD_1T26, PERIOD_2T26, fold, identity_key
 from claimledger.ingest.classify import DocumentClass
 from claimledger.ingest.types import IngestError, StoredDocument
 
+# extract_recipe may use docling_core; convert path does not pin in-process.
+PINNED_DOCLING = "2.130.0"
 _STATEMENT = "income_statement"
 _RECIPE_PERIODS = frozenset({PERIOD_1T26, PERIOD_2T26})
 _PERIOD_END = {
@@ -51,11 +54,17 @@ def extract_recipe(
     return tuple(found.values())
 
 
+def _require_pinned_docling() -> None:
+    installed = version("docling")
+    if installed != PINNED_DOCLING:
+        raise IngestError(
+            f"docling {installed} does not match pin {PINNED_DOCLING}"
+        )
+
+
 def _load_pinned_docling() -> None:
     # Docling imports NumPy before torch. On Windows that order fails c10.dll init.
     import torch  # noqa: F401
-
-    from claimledger.ingest.parse import _require_pinned_docling
 
     _require_pinned_docling()
 

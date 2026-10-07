@@ -15,3 +15,10 @@ class StoredDocument:
     artifact_hash: str
     json_path: Path
     source_pdf: Path
+
+
+@dataclass(frozen=True)
+class ConvertBundle:
+    payload: dict
+    doclang: str
+    page_pngs: dict[int, bytes]

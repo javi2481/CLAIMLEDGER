@@ -824,7 +824,12 @@ def test_compose_pins_slim_screen() -> None:
         assert flag in compose
         assert "false" in compose
     assert "8000:8000" not in compose
-    assert compose.count("ports:") == 1
+    assert "quay.io/docling-project/docling-serve-cpu:v1.35.0" in compose
+    assert 'DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"' in compose
+    assert "5001:5001" in compose
+    assert compose.count("ports:") == 2  # openwebui + docling-serve (not claimledger)
+    claim_block = compose.split("claimledger:")[1].split("openwebui:")[0]
+    assert "depends_on" not in claim_block
     folded = compose.casefold()
     assert "pipelines" not in folded
     assert "knowledge" not in folded

@@ -1,4 +1,21 @@
 services:
+  docling-serve:
+    image: quay.io/docling-project/docling-serve-cpu:v1.35.0
+    ports:
+      - "5001:5001"
+    environment:
+      DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"
+      DOCLING_SERVE_ENABLE_UI: "false"
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://127.0.0.1:5001/version')\"",
+        ]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+      start_period: 120s
   claimledger:
     build: .
     command:
@@ -6,8 +23,9 @@ services:
     environment:
       CLAIMLEDGER_ARTIFACT_HASH: ${CLAIMLEDGER_ARTIFACT_HASH:-7b7b624ade1011f9fd75931968312ef5c0fa19fe6061bb2cc5eb1491ffaa364f}
       DEEPSEEK_API_KEY: ${DEEPSEEK_API_KEY:-}
+      DOCLING_SERVE_URL: ${DOCLING_SERVE_URL:-http://docling-serve:5001}
     volumes:
-      - ./artifacts/docling:/usr/local/lib/python3.11/artifacts/docling:ro
+      - ./artifacts/docling:/app/artifacts/docling:ro
   openwebui:
     image: ghcr.io/open-webui/open-webui:v0.11.4-slim
     ports:

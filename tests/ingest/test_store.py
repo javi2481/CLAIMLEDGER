@@ -1,17 +1,20 @@
-"""Hashed Docling JSON store. Local Path convert only."""
+"""Hashed Docling JSON store. convert_local / ZIP DocLang + PNGs only."""
 
 from __future__ import annotations
 
 import ast
 import hashlib
+import io
 import json
+import zipfile
 from pathlib import Path
+from typing import Any
 
 import pytest
 
 from claimledger.ingest.parse import convert_pdf
 from claimledger.ingest.store import artifacts_dir, load, load_or_convert
-from claimledger.ingest.types import IngestError, StoredDocument
+from claimledger.ingest.types import ConvertBundle, IngestError, StoredDocument
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 INGEST_ROOT = REPO_ROOT / "src" / "claimledger" / "ingest"
@@ -20,8 +23,10 @@ FORBIDDEN_SOURCE_TOKENS = (
     "docling-graph",
     "docling_graph",
     "llama_index",
-    "http://",
-    "https://",
+    "/v1/convert/source",
+    "DocumentConverter",
+    "download_models",
+    "export_to_doclang",
 )
 
 
@@ -43,6 +48,25 @@ def _use_artifacts(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
         "claimledger.ingest.store.artifacts_dir",
         lambda: root,
     )
+
+
+def _bundle(
+    payload: dict,
+    doclang: str = "zip-doclang",
+    page_pngs: dict[int, bytes] | None = None,
+) -> ConvertBundle:
+    return ConvertBundle(
+        payload=payload,
+        doclang=doclang,
+        page_pngs=page_pngs or {},
+    )
+
+
+def _patch_convert(
+    monkeypatch: pytest.MonkeyPatch, fake: Any
+) -> None:
+    monkeypatch.setattr("claimledger.ingest.parse.convert_local", fake)
+    monkeypatch.setattr("claimledger.ingest.store.convert_local", fake)
 
 
 def test_load_existing_artifact_by_canonical_hash(
@@ -79,16 +103,15 @@ def test_load_rejects_bytes_that_do_not_match_the_name(
 def test_cache_hit_rejects_mismatch_without_reconvert(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from docling_core.types.doc.document import DoclingDocument
-
     pdf = tmp_path / "cached.pdf"
     pdf.write_bytes(b"%PDF-1.4 cached")
-    honest = DoclingDocument(name="cached").export_to_dict()
+    honest = {"name": "cached"}
     digest = _sha256_hex(_canonical_json_bytes(honest))
-    other = _canonical_json_bytes(DoclingDocument(name="other").export_to_dict())
+    other = _canonical_json_bytes({"name": "other"})
     artifacts = tmp_path / "docling"
     artifacts.mkdir()
     (artifacts / f"{digest}.json").write_bytes(other)
+    (artifacts / f"{digest}.dclg").write_text("cached-dclg", encoding="utf-8")
     pdf_sha = _sha256_hex(pdf.read_bytes())
     (artifacts / "manifest.json").write_text(
         json.dumps({pdf_sha: digest}),
@@ -96,11 +119,10 @@ def test_cache_hit_rejects_mismatch_without_reconvert(
     )
     _use_artifacts(monkeypatch, artifacts)
 
-    def boom(source: Path) -> dict:
+    def boom(source: Path) -> ConvertBundle:
         raise AssertionError(f"reconvert of {source}")
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", boom)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", boom)
+    _patch_convert(monkeypatch, boom)
 
     with pytest.raises(IngestError):
         load_or_convert(pdf)
@@ -135,14 +157,13 @@ def test_missing_hash_converts_local_path_only(
     _use_artifacts(monkeypatch, artifacts)
     seen: list[Path] = []
 
-    def fake_convert(source: Path) -> dict:
+    def fake_convert(source: Path) -> ConvertBundle:
         seen.append(source)
         assert isinstance(source, Path)
         assert source.is_file()
-        return {"kind": "converted", "name": source.name}
+        return _bundle({"kind": "converted", "name": source.name})
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", fake_convert)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", fake_convert)
+    _patch_convert(monkeypatch, fake_convert)
 
     stored = load_or_convert(pdf)
 
@@ -154,6 +175,9 @@ def test_missing_hash_converts_local_path_only(
     assert _sha256_hex(on_disk) == stored.artifact_hash
     assert on_disk == _canonical_json_bytes(json.loads(on_disk))
     assert load(stored.artifact_hash) == {"kind": "converted", "name": pdf.name}
+    assert stored.json_path.with_suffix(".dclg").read_text(encoding="utf-8") == (
+        "zip-doclang"
+    )
     pdf_sha = _sha256_hex(pdf.read_bytes())
     manifest = json.loads((artifacts / "manifest.json").read_text(encoding="utf-8"))
     assert manifest[pdf_sha] == stored.artifact_hash
@@ -174,11 +198,12 @@ def test_distinct_pdfs_persist_distinct_hashes(
     pdf_a.write_bytes(b"%PDF-1.4 A")
     pdf_b.write_bytes(b"%PDF-1.4 B")
 
-    def fake_convert(source: Path) -> dict:
-        return {"kind": "converted", "name": source.name, "size": source.stat().st_size}
+    def fake_convert(source: Path) -> ConvertBundle:
+        return _bundle(
+            {"kind": "converted", "name": source.name, "size": source.stat().st_size}
+        )
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", fake_convert)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", fake_convert)
+    _patch_convert(monkeypatch, fake_convert)
 
     stored_a = load_or_convert(pdf_a)
     stored_b = load_or_convert(pdf_b)
@@ -191,16 +216,15 @@ def test_distinct_pdfs_persist_distinct_hashes(
 def test_existing_pdf_hash_loads_without_reconvert(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from docling_core.types.doc.document import DoclingDocument
-
     pdf = tmp_path / "cached.pdf"
     pdf.write_bytes(b"%PDF-1.4 cached")
-    payload = DoclingDocument(name="cached").export_to_dict()
+    payload = {"name": "cached"}
     raw = _canonical_json_bytes(payload)
     digest = _sha256_hex(raw)
     artifacts = tmp_path / "docling"
     artifacts.mkdir()
     (artifacts / f"{digest}.json").write_bytes(raw)
+    (artifacts / f"{digest}.dclg").write_text("cached-dclg", encoding="utf-8")
     pdf_sha = _sha256_hex(pdf.read_bytes())
     (artifacts / "manifest.json").write_text(
         json.dumps({pdf_sha: digest}),
@@ -208,11 +232,10 @@ def test_existing_pdf_hash_loads_without_reconvert(
     )
     _use_artifacts(monkeypatch, artifacts)
 
-    def boom(source: Path) -> dict:
+    def boom(source: Path) -> ConvertBundle:
         raise AssertionError(f"reconvert of {source}")
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", boom)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", boom)
+    _patch_convert(monkeypatch, boom)
 
     stored = load_or_convert(pdf)
 
@@ -224,32 +247,27 @@ def test_existing_pdf_hash_loads_without_reconvert(
     assert load(digest) == payload
 
 
-def test_saved_json_is_also_stored_as_doclang(
+def test_saved_json_stores_zip_doclang(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from docling_core.types.doc.document import DoclingDocument
-
-    document = DoclingDocument(name="mini")
-    payload = document.export_to_dict()
-    expected = document.export_to_doclang()
+    payload = {"name": "mini"}
     pdf = tmp_path / "mini.pdf"
     pdf.write_bytes(b"%PDF-1.4 mini")
     artifacts = tmp_path / "docling"
     _use_artifacts(monkeypatch, artifacts)
     seen: list[Path] = []
 
-    def fake_convert(source: Path) -> dict:
+    def fake_convert(source: Path) -> ConvertBundle:
         seen.append(source)
-        return payload
+        return _bundle(payload, doclang="compiler-doclang")
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", fake_convert)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", fake_convert)
+    _patch_convert(monkeypatch, fake_convert)
 
     stored = load_or_convert(pdf)
 
     doclang_path = stored.json_path.with_suffix(".dclg")
     assert doclang_path.is_file()
-    assert doclang_path.read_text(encoding="utf-8") == expected
+    assert doclang_path.read_text(encoding="utf-8") == "compiler-doclang"
     assert load(stored.artifact_hash) == payload
     assert _sha256_hex(stored.json_path.read_bytes()) == stored.artifact_hash
     assert seen == [pdf.resolve()]
@@ -258,17 +276,13 @@ def test_saved_json_is_also_stored_as_doclang(
 
     assert stored_again.artifact_hash == stored.artifact_hash
     assert seen == [pdf.resolve()]
-    assert doclang_path.read_text(encoding="utf-8") == expected
+    assert doclang_path.read_text(encoding="utf-8") == "compiler-doclang"
 
 
-def test_cached_json_gains_doclang_without_reconvert(
+def test_missing_doclang_forces_recompile(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    from docling_core.types.doc.document import DoclingDocument
-
-    document = DoclingDocument(name="cached")
-    payload = document.export_to_dict()
-    expected = document.export_to_doclang()
+    payload = {"name": "cached"}
     raw = _canonical_json_bytes(payload)
     digest = _sha256_hex(raw)
     pdf = tmp_path / "cached.pdf"
@@ -283,20 +297,21 @@ def test_cached_json_gains_doclang_without_reconvert(
         encoding="utf-8",
     )
     _use_artifacts(monkeypatch, artifacts)
+    seen: list[Path] = []
 
-    def boom(source: Path) -> dict:
-        raise AssertionError(f"reconvert of {source}")
+    def fake_convert(source: Path) -> ConvertBundle:
+        seen.append(source)
+        return _bundle({"name": "recompiled"}, doclang="recompiled-dclg")
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", boom)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", boom)
+    _patch_convert(monkeypatch, fake_convert)
 
     stored = load_or_convert(pdf)
 
-    doclang_path = json_path.with_suffix(".dclg")
-    assert stored.json_path == json_path
-    assert doclang_path.is_file()
-    assert doclang_path.read_text(encoding="utf-8") == expected
-    assert load(digest) == payload
+    assert seen == [pdf.resolve()]
+    assert stored.json_path.with_suffix(".dclg").read_text(encoding="utf-8") == (
+        "recompiled-dclg"
+    )
+    assert load(stored.artifact_hash) == {"name": "recompiled"}
 
 
 def test_load_or_convert_rejects_non_path(tmp_path: Path) -> None:
@@ -306,7 +321,7 @@ def test_load_or_convert_rejects_non_path(tmp_path: Path) -> None:
         load_or_convert(tmp_path / "missing.pdf")
 
 
-def test_ingest_sources_forbid_url_httpsource_and_docling_graph() -> None:
+def test_ingest_sources_forbid_embedded_compiler_and_url_convert() -> None:
     sources = sorted(INGEST_ROOT.glob("*.py"))
     assert [path.name for path in sources] == [
         "__init__.py",
@@ -319,7 +334,7 @@ def test_ingest_sources_forbid_url_httpsource_and_docling_graph() -> None:
     ]
     combined = "\n".join(path.read_text(encoding="utf-8") for path in sources)
     for token in FORBIDDEN_SOURCE_TOKENS:
-        assert token not in combined
+        assert token not in combined, token
 
     parse_source = (INGEST_ROOT / "parse.py").read_text(encoding="utf-8")
     tree = ast.parse(parse_source)
@@ -334,12 +349,13 @@ def test_ingest_sources_forbid_url_httpsource_and_docling_graph() -> None:
         for node in ast.walk(tree)
         if isinstance(node, ast.ImportFrom) and node.module
     }
-    assert any(name == "docling" or name.startswith("docling.") for name in imported | imported_from)
-    assert not any("graph" in name for name in imported | imported_from)
-    assert "DocumentConverter" in parse_source
-    assert "do_ocr=False" in parse_source or "do_ocr = False" in parse_source
-    assert "artifacts_path" in parse_source
-    assert "2.130.0" in parse_source
+    assert not any(
+        name == "docling" or (name is not None and name.startswith("docling."))
+        for name in imported | imported_from
+    )
+    assert "convert_local" in parse_source
+    assert "ocr_preset" in parse_source
+    assert "rapidocr" in parse_source
 
 
 def test_default_artifact_root_is_repo_docling_dir() -> None:
@@ -410,16 +426,11 @@ def test_strip_page_pixels_keeps_hash(
     artifacts = tmp_path / "docling"
     _use_artifacts(monkeypatch, artifacts)
 
-    def fake_convert(source: Path) -> dict:
+    def fake_convert(source: Path) -> ConvertBundle:
         assert isinstance(source, Path)
-        return dirty
+        return _bundle(dirty)
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", fake_convert)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", fake_convert)
-    monkeypatch.setattr(
-        "claimledger.ingest.store.doclang_from_payload",
-        lambda payload: "synthetic-doclang",
-    )
+    _patch_convert(monkeypatch, fake_convert)
 
     stored = load_or_convert(pdf)
 
@@ -431,60 +442,27 @@ def test_strip_page_pixels_keeps_hash(
     assert load(stored.artifact_hash) == clean
 
 
-def test_partial_success_is_not_exported() -> None:
-    from types import SimpleNamespace
-
-    from claimledger.ingest.parse import _export_complete
-
-    partial = SimpleNamespace(
-        status=SimpleNamespace(name="PARTIAL_SUCCESS", value="partial_success"),
-        document=SimpleNamespace(export_to_dict=lambda: {"pages": []}),
-    )
-    with pytest.raises(IngestError, match="success"):
-        _export_complete(partial)
-
-    complete = SimpleNamespace(
-        status=SimpleNamespace(name="SUCCESS", value="success"),
-        document=SimpleNamespace(export_to_dict=lambda: {"pages": [{"ok": True}]}),
-    )
-    assert _export_complete(complete) == {"pages": [{"ok": True}]}
-
-    parse_source = (INGEST_ROOT / "parse.py").read_text(encoding="utf-8")
-    assert "return _export_complete(result)" in parse_source
-
-
-def test_sidecar_png_does_not_move_hash(
+def test_sidecar_png_from_zip_does_not_move_hash(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    import claimledger.ingest.parse as parse
     from claimledger.ingest.store import canonical_json_bytes
 
     png_one = b"\x89PNG\r\n\x1a\npage-one"
     png_two = b"\x89PNG\r\n\x1a\npage-two"
     same = {"kind": "sidecar", "pages": {"1": {"size": {"width": 2, "height": 2}}}}
     empty_payload = {"kind": "no-sidecar"}
-    page_pngs: dict[int, bytes] = {}
-    monkeypatch.setattr(parse, "last_page_pngs", page_pngs, raising=False)
 
     artifacts = tmp_path / "docling"
     _use_artifacts(monkeypatch, artifacts)
-    monkeypatch.setattr(
-        "claimledger.ingest.store.doclang_from_payload",
-        lambda payload: "synthetic-doclang",
-    )
 
-    def fake_convert(source: Path) -> dict:
+    def fake_convert(source: Path) -> ConvertBundle:
         assert isinstance(source, Path)
         assert source.is_file()
-        page_pngs.clear()
         if source.name == "with-pages.bin":
-            page_pngs[1] = png_one
-            page_pngs[2] = png_two
-            return same
-        return empty_payload
+            return _bundle(same, page_pngs={1: png_one, 2: png_two})
+        return _bundle(empty_payload)
 
-    monkeypatch.setattr("claimledger.ingest.parse.convert_pdf", fake_convert)
-    monkeypatch.setattr("claimledger.ingest.store.convert_pdf", fake_convert)
+    _patch_convert(monkeypatch, fake_convert)
 
     with_pages = tmp_path / "with-pages.bin"
     with_pages.write_bytes(b"synthetic-pages")
@@ -509,63 +487,18 @@ def test_sidecar_png_does_not_move_hash(
 
     sidecar_one = artifacts / f"{stored.artifact_hash}.p1.png"
     sidecar_two = artifacts / f"{stored.artifact_hash}.p2.png"
-    parse_source = (INGEST_ROOT / "parse.py").read_text(encoding="utf-8")
-    problems: list[str] = []
-    if not sidecar_one.is_file():
-        problems.append("missing sidecar file")
-    if "generate_page_images = True" not in parse_source:
-        problems.append("missing generate_page_images flag")
-    assert problems == [], problems
-
+    assert sidecar_one.is_file()
     assert sidecar_one.read_bytes() == png_one
     assert sidecar_two.is_file()
     assert sidecar_two.read_bytes() == png_two
-    scale_lines = [
-        line.strip()
-        for line in parse_source.splitlines()
-        if "images_scale" in line and not line.strip().startswith("#")
-    ]
-    assert scale_lines == [] or scale_lines == ["options.images_scale = 1.0"]
-    assert "pil_image" in parse_source
-    assert "last_page_pngs" in parse_source
-    assert "strip_page_pixels" in parse_source
-    assert 'PINNED_DOCLING = "2.130.0"' in parse_source
     gitignore = (REPO_ROOT / ".gitignore").read_text(encoding="utf-8")
     assert "artifacts/docling/*.png" in gitignore
 
 
-def test_page_images_capture_uses_pil_image() -> None:
-    from types import SimpleNamespace
-
-    import claimledger.ingest.parse as parse
-    from claimledger.ingest.parse import _export_complete
-
-    captured = b"\x89PNG\r\n\x1a\nfrom-pil"
-
-    class _Image:
-        def save(self, buffer: object, format: str) -> None:
-            assert format == "PNG"
-            buffer.write(captured)  # type: ignore[attr-defined]
-
-    document = SimpleNamespace(
-        pages={
-            1: SimpleNamespace(image=SimpleNamespace(pil_image=_Image())),
-            3: SimpleNamespace(image=None),
-        },
-        export_to_dict=lambda: {
-            "pages": {
-                "1": {"image": {"uri": "data:image/png;base64,AAAA"}, "size": 1},
-                "3": {"size": 3},
-            }
-        },
-    )
-    result = SimpleNamespace(
-        status=SimpleNamespace(value="success"),
-        document=document,
-    )
-
-    payload = _export_complete(result)
-
-    assert payload == {"pages": {"1": {"size": 1}, "3": {"size": 3}}}
-    assert "data:image" not in json.dumps(payload)
-    assert parse.last_page_pngs == {1: captured}
+def test_convert_local_zip_roundtrip_helpers_exist() -> None:
+    # Triangulation: store path must not regenerate DocLang from payload helpers.
+    store_source = (INGEST_ROOT / "store.py").read_text(encoding="utf-8")
+    assert "doclang_from_payload" not in store_source
+    assert "_ensure_doclang" not in store_source
+    assert "convert_local" in store_source
+    assert "last_page_pngs" not in store_source

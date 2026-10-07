@@ -17,6 +17,7 @@ dev = [
 docling = [
     "docling==2.130.0",
     "docling-graph==1.9.1",
+    "httpx==0.28.1",
 ]
 retrieval = [
     "llama-index-readers-docling==0.5.0",

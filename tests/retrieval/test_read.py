@@ -51,7 +51,12 @@ def _write_artifact(root: Path, payload: dict) -> tuple[str, Path, str]:
 
 
 def _forbid_conversion_and_url(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
-    calls = {"load_or_convert": 0, "convert_pdf": 0, "urlopen": 0}
+    calls = {
+        "load_or_convert": 0,
+        "convert_pdf": 0,
+        "convert_local": 0,
+        "urlopen": 0,
+    }
 
     def _count(key: str):
         def _inner(*_args: object, **_kwargs: object) -> None:
@@ -60,10 +65,17 @@ def _forbid_conversion_and_url(monkeypatch: pytest.MonkeyPatch) -> dict[str, int
         return _inner
 
     monkeypatch.setattr(ingest_store, "load_or_convert", _count("load_or_convert"))
-    monkeypatch.setattr(ingest_store, "convert_pdf", _count("convert_pdf"))
     monkeypatch.setattr(
         "claimledger.ingest.parse.convert_pdf",
         _count("convert_pdf"),
+    )
+    monkeypatch.setattr(
+        "claimledger.ingest.parse.convert_local",
+        _count("convert_local"),
+    )
+    monkeypatch.setattr(
+        "claimledger.ingest.store.convert_local",
+        _count("convert_local"),
     )
     monkeypatch.setattr("urllib.request.urlopen", _count("urlopen"))
     return calls
@@ -126,7 +138,12 @@ def test_stored_json_reader_uses_json_export_on_local_path(
     assert state["parser_texts"] == [[text]]
     assert path.is_file()
     assert path.parent == artifacts
-    assert calls == {"load_or_convert": 0, "convert_pdf": 0, "urlopen": 0}
+    assert calls == {
+        "load_or_convert": 0,
+        "convert_pdf": 0,
+        "convert_local": 0,
+        "urlopen": 0,
+    }
 
 
 def test_second_artifact_is_read_from_its_own_local_json(
@@ -156,7 +173,12 @@ def test_second_artifact_is_read_from_its_own_local_json(
     assert state["export_types"] == ["json", "json"]
     assert state["paths"] == [path_a, path_b]
     assert state["parser_texts"] == [[text_a], [text_b]]
-    assert calls == {"load_or_convert": 0, "convert_pdf": 0, "urlopen": 0}
+    assert calls == {
+        "load_or_convert": 0,
+        "convert_pdf": 0,
+        "convert_local": 0,
+        "urlopen": 0,
+    }
 
 
 def test_missing_artifact_raises_without_convert_or_url(
@@ -180,5 +202,10 @@ def test_missing_artifact_raises_without_convert_or_url(
     assert state["export_types"] == []
     assert state["paths"] == []
     assert state["parser_texts"] == []
-    assert calls == {"load_or_convert": 0, "convert_pdf": 0, "urlopen": 0}
+    assert calls == {
+        "load_or_convert": 0,
+        "convert_pdf": 0,
+        "convert_local": 0,
+        "urlopen": 0,
+    }
     assert not (artifacts / f"{missing}.json").exists()
