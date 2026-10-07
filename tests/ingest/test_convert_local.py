@@ -31,6 +31,28 @@ def _zip_bytes(
     return buf.getvalue()
 
 
+def _serve_layout_zip_bytes(
+    payload: dict,
+    *,
+    stem: str = "sample",
+    doclang: str = "doclang-from-serve",
+    pages: dict[int, bytes] | None = None,
+) -> bytes:
+    """Layout observed from docling-serve 1.35.0 ZIP responses."""
+    buf = io.BytesIO()
+    with zipfile.ZipFile(buf, "w") as zf:
+        zf.writestr("artifacts/", "")
+        zf.writestr(f"{stem}.json", json.dumps(payload))
+        zf.writestr(f"{stem}.dclg", doclang)
+        for page_no, png in (pages or {1: b"\x89PNG\r\n\x1a\npage-1"}).items():
+            digest = f"{page_no:064x}"
+            zf.writestr(
+                f"artifacts/page_{page_no:06d}_{digest}.png",
+                png,
+            )
+    return buf.getvalue()
+
+
 def _form_values(data: dict[str, Any]) -> dict[str, list[str]]:
     """Normalize httpx multipart form data for assertions."""
     out: dict[str, list[str]] = {}
@@ -126,6 +148,30 @@ def test_convert_local_posts_zip_referenced_rapidocr(
     assert form["image_export_mode"] == ["referenced"]
     assert form["ocr_preset"] == ["rapidocr"]
     assert client.last_files is not None
+
+
+def test_convert_local_unpacks_serve_1_35_zip_layout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Live serve names stem.json / stem.dclg / artifacts/page_NNNNNN_<hash>.png."""
+    from claimledger.ingest.parse import convert_local
+
+    pdf = tmp_path / "BYMA_sample.pdf"
+    pdf.write_bytes(b"%PDF-1.4 sample")
+    payload = {"name": "serve-layout"}
+    pages = {1: b"\x89PNG\r\n\x1a\np1", 2: b"\x89PNG\r\n\x1a\np2"}
+    _install_httpx(
+        monkeypatch,
+        _serve_layout_zip_bytes(
+            payload, stem="BYMA_sample", doclang="serve-dclg", pages=pages
+        ),
+    )
+
+    bundle = convert_local(pdf)
+
+    assert bundle.payload == payload
+    assert bundle.doclang == "serve-dclg"
+    assert bundle.page_pngs == pages
 
 
 def test_convert_local_seal_on_and_off_fields(
@@ -232,6 +278,7 @@ def test_compose_remote_services_false_and_no_runtime_depends_on_serve() -> None
     serve_block = text[serve_idx:serve_end]
     assert "DOCLING_SERVE_ENABLE_REMOTE_SERVICES" in serve_block
     assert "false" in serve_block
+    assert 'DOCLING_SERVE_MAX_SYNC_WAIT: "7200"' in serve_block
 
 
 def test_convert_pdf_aliases_payload(

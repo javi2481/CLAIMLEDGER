@@ -13,7 +13,10 @@ from typing import Any
 from claimledger.ingest.types import ConvertBundle, IngestError
 
 DEFAULT_SERVE_URL = "http://127.0.0.1:5001"
-_PAGE_PNG_RE = re.compile(r"(?:^|/)page-(\d+)\.png$")
+# document.json layout (tests) or serve 1.35.0: artifacts/page_000001_<sha>.png
+_PAGE_PNG_RE = re.compile(
+    r"(?:^|/)(?:page-(\d+)\.png|page_0*(\d+)_[0-9a-fA-F]+\.png)$"
+)
 
 
 def serve_base_url() -> str:
@@ -42,20 +45,37 @@ def convert_form_fields() -> dict[str, Any]:
     }
 
 
+def _zip_root_files(names: list[str]) -> list[str]:
+    roots: list[str] = []
+    for name in names:
+        norm = name.replace("\\", "/").rstrip("/")
+        if not norm or "/" in norm:
+            continue
+        roots.append(name)
+    return roots
+
+
+def _pick_zip_member(names: list[str], *, preferred: str, suffix: str) -> str | None:
+    preferred_hit = next(
+        (n for n in names if n.replace("\\", "/").endswith(preferred) or n == preferred),
+        None,
+    )
+    if preferred_hit is not None:
+        return preferred_hit
+    return next(
+        (n for n in _zip_root_files(names) if n.lower().endswith(suffix)),
+        None,
+    )
+
+
 def _unpack_convert_zip(raw: bytes) -> ConvertBundle:
     try:
         archive = zipfile.ZipFile(BytesIO(raw))
     except zipfile.BadZipFile as exc:
         raise IngestError("convert response is not a ZIP") from exc
     names = archive.namelist()
-    json_name = next(
-        (n for n in names if n.endswith("document.json") or n == "document.json"),
-        None,
-    )
-    dclg_name = next(
-        (n for n in names if n.endswith("document.dclg") or n == "document.dclg"),
-        None,
-    )
+    json_name = _pick_zip_member(names, preferred="document.json", suffix=".json")
+    dclg_name = _pick_zip_member(names, preferred="document.dclg", suffix=".dclg")
     if json_name is None or dclg_name is None:
         raise IngestError("convert ZIP missing document.json or document.dclg")
     try:
@@ -69,7 +89,8 @@ def _unpack_convert_zip(raw: bytes) -> ConvertBundle:
     for name in names:
         match = _PAGE_PNG_RE.search(name.replace("\\", "/"))
         if match:
-            page_pngs[int(match.group(1))] = archive.read(name)
+            page_no = int(match.group(1) or match.group(2))
+            page_pngs[page_no] = archive.read(name)
     return ConvertBundle(payload=payload, doclang=doclang, page_pngs=page_pngs)
 
 
@@ -83,7 +104,8 @@ def convert_local(pdf: Path) -> ConvertBundle:
     url = f"{serve_base_url()}/v1/convert/file"
     try:
         with pdf.open("rb") as handle:
-            with httpx.Client(timeout=600.0) as client:
+            # Large memoria PDFs with OCR can exceed 10 minutes on CPU.
+            with httpx.Client(timeout=7200.0) as client:
                 response = client.post(
                     url,
                     files={"files": (pdf.name, handle, "application/pdf")},

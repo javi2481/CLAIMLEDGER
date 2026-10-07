@@ -6,6 +6,8 @@ services:
     environment:
       DOCLING_SERVE_ENABLE_REMOTE_SERVICES: "false"
       DOCLING_SERVE_ENABLE_UI: "false"
+      # Sync /v1/convert/file waits this long before HTTP 504 (default 120s).
+      DOCLING_SERVE_MAX_SYNC_WAIT: "7200"
     healthcheck:
       test:
         [
