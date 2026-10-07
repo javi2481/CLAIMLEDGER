@@ -15,9 +15,11 @@ CLAIMLEDGER es la capa que falta entre buscar evidencia y afirmar un número. No
 
 ## Estado
 
-Diseño cerrado. Kernel **aún no implementado**. El primer cambio SDD es `fase-0-kernel` (TDD estricto, sin Docling).
+Diseño cerrado. Fases 0–9 y 11–13 implementadas. La fase 10 (VLM) está diferida hasta que haya una GPU. No hay un cambio SDD activo.
 
-Pins a declarar: `docling==2.130.0` · `docling-graph==1.9.1`. Python ≥3.11.
+La fase 11 escribe `graph.cypher` y no levanta Neo4j. La fase 12 dibuja un fence Mermaid de una serie ya verificada. La fase 13 es un plan determinista que llama a `query` una vez por trimestre. El detalle está en el [plan](docs/plan-implementacion.md).
+
+Pins: `docling==2.130.0` · `docling-graph==1.9.1` · LlamaIndex docling `0.5.0` · `starlette==1.0.0` · Open WebUI `v0.11.4-slim`. Python ≥3.11.
 
 ## Leer
 
@@ -26,9 +28,10 @@ Pins a declarar: `docling==2.130.0` · `docling-graph==1.9.1`. Python ≥3.11.
 | [North star](docs/north-star.md) | Filtro: ¿esta decisión suma o distrae? |
 | [Documento rector](docs/documento-rector.md) | Tesis, stack, planos, gate |
 | [Fase 0](docs/fase-0.md) | Contrato de arranque del kernel |
-| [Plan de implementación](docs/plan-implementacion.md) | Oleadas A/B/C y slices TDD |
+| [Plan de implementación](docs/plan-implementacion.md) | Estado de cada fase, oleadas y slices TDD |
 | [Ingeniería](docs/ingenieria.md) | SDD + TDD |
-| [OpenSpec](openspec/changes/fase-0-kernel/) | explore → propose → spec → design → tasks |
+| [Specs](openspec/specs/) | Contratos vigentes |
+| [Fase 0 archivada](openspec/changes/archive/2026-09-23-fase-0-kernel/) | Primer cambio SDD, ya cerrado |
 | [AGENTS.md](AGENTS.md) | Contrato para agentes |
 
 ## Cómo se construye

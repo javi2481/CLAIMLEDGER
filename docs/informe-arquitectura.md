@@ -246,7 +246,7 @@ Pipelines **siguen documentados** (no aparecen como “legacy” en la página d
 1. Endpoint OpenAI-compatible en el backend (más simple para el MVP).
 2. Tool OpenAPI / MCP que llame `POST /claims/query` si hace falta tool-calling.
 
-La UI muestra VERIFIED / ABSTAINED. No reimplementa identidad. Más adelante **dibuja** series ya verificadas (Mermaid, matplotlib, Artifact). No calcula el número. No copiamos el visor de otra plataforma.
+La UI muestra VERIFICADO / ME ABSTENGO. No reimplementa identidad. Dibuja la serie ya verificada como fence Mermaid. No calcula el número. No copiamos el visor de otra plataforma. matplotlib y Artifact no entraron.
 
 ---
 
@@ -362,7 +362,9 @@ Abstained:
 
 ## Orden de implementación
 
-Fase 0 declara el contrato y los pins. Los tests del kernel son **independientes de Docling**. El A/B de parse viene después.
+El estado vivo está en [plan-implementacion.md](plan-implementacion.md). Esta tabla es el orden. Las fases 0–9 y 11–13 están cerradas. La 10 está diferida. La 11 no levanta Neo4j. La 12 es Mermaid. La 13 es un plan determinista.
+
+Fase 0 declara el contrato y los pins. Los tests del kernel siguen **independientes de Docling**.
 
 | Fase | Qué | Criterio de cierre |
 |------|-----|--------------------|
@@ -376,10 +378,10 @@ Fase 0 declara el contrato y los pins. Los tests del kernel son **independientes
 | 7 — UI ficha | Open WebUI: sello + chips + texto | Lógica fuera de la UI |
 | 8 — Recorte | Foto de la zona de la página (bbox Docling) | Prueba visual propia |
 | 9 — Pack / comparar | Merge 1T+comunicado+deck; 1T vs 2T | Conflicto visible; resta en código |
-| 10 — VLM | Segundo lector de páginas difíciles | Sigue perdiendo vs gold. No crea identidad |
-| 11 — Neo4j | Cypher sobre el libro | Lookup sigue siendo SoT |
-| 12 — Gráficos | Serie verificada → Mermaid / matplotlib / Artifact | Open WebUI dibuja; hueco si un trimestre se abstiene |
-| 13 — Orquestador | LlamaIndex Workflows alrededor del kernel | Identidad/verificación son servicios, no agentes |
+| 10 — VLM | Segundo lector de páginas difíciles. **Diferida** | Sigue perdiendo vs gold. No crea identidad |
+| 11 — Cypher | Script del libro, sin servidor Neo4j. **Cerrada** | Lookup sigue siendo SoT |
+| 12 — Gráficos | Serie verificada → Mermaid `xychart-beta`. **Cerrada** | Open WebUI dibuja; hueco si un trimestre se abstiene |
+| 13 — Plan | Una llamada a `query` por trimestre. **Cerrada** | Identidad/verificación son servicios, no agentes |
 | Después | XBRL, datos de slides, aire-gap | No es MVP |
 
 Si el A/B falla se investiga: conversión Docling, schema, template, serialización, mapeo al grafo. **No** se relaja el gold. **No** vuelve MinerU.
@@ -399,11 +401,9 @@ Si el A/B falla se investiga: conversión Docling, schema, template, serializaci
 
 ## Respuesta a la pregunta de siguiente paso
 
-Fase 0 (contrato en schemas + gold + pins), no Fase 1 (A/B Docling).
+Las fases 0–9 y 11–13 ya están en el árbol. El siguiente hueco del plan es la fase 10, y está diferida: no hay GPU para el segundo lector VLM.
 
-Es local, no toca Docker, y deja el contrato listo para el A/B. El primer commit útil es exactamente eso.
-
-Si querés arrancar, el movimiento es: contrato de identidad + gold v1/v2 congelado + `docling==2.130.0` + `docling-graph==1.9.1`, tests del kernel **sin** Docling, **sin cambiar un expected numérico**.
+No hay cambio SDD activo. El gold sigue congelado. Los tests del kernel siguen sin importar Docling.
 
 ---
 

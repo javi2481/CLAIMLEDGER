@@ -162,9 +162,9 @@ El LLM no crea la verdad. Puede ayudar **antes** (pregunta → candidatos). No p
 
 Si el parse no iguala el gold: no se cambia el expected, no se inventa la identidad con un modelo, no se trae MinerU. Se investiga conversión, schema, template, serialización o mapeo al grafo.
 
-Un VLM puede **releer** una página difícil más adelante. No puede decidir qué cifra es. Neo4j consulta el libro; no verifica. El recorte de la página (prueba visual propia) viene **después** de la ficha. Un gráfico en Open WebUI solo dibuja una **serie ya verificada**; no calcula el número.
+Un VLM puede **releer** una página difícil. Sigue diferido hasta que haya GPU. No puede decidir qué cifra es. La fase 11 exporta Cypher y lee los períodos de ese script; una base Neo4j, si algún día corre, consulta el libro y no verifica. El recorte de la página ya acompaña la ficha. Un gráfico en Open WebUI dibuja una **serie ya verificada** y no calcula el número.
 
-Más adelante, LlamaIndex puede **orquestar** (plan, paralelo, análisis). Eso crece **alrededor** del kernel. Identidad y verificación son servicios, no agentes. Los agentes deciden qué hacer; CLAIMLEDGER decide qué es verdad. **Ningún agente se saltea el kernel.**
+El plan de los últimos cuatro trimestres es código alrededor del kernel: una verificación por trimestre. Identidad y verificación son servicios. **Ningún agente se saltea el kernel.**
 
 El Core no inventa claims al parsear. El ledger se alimenta de evidencia; el claim aparece cuando se cumple el contrato. Ingest (libro) y Query (pregunta) son dos operaciones. El JSON de Docling se guarda inmutable.
 

@@ -69,5 +69,5 @@ Delete a single `runs/<date>/` folder to drop that call. Revert any call-site ed
 - [x] A call can be made without opening phase 8 or phase 9.
 - [x] That call writes `runs/<date>/audit.md` and does not add a script.
 - [x] Every row in that file is `keep` with a gap, or `call-native` / `delete` with a pinned API.
-- [ ] A second call writes a new run and leaves the previous one in place.
+- [x] A second call writes a new run and leaves the previous one in place.
 - [x] Kernel tests still do not import `docling`. Gold numbers are unchanged.

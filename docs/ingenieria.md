@@ -4,7 +4,7 @@ Cómo se construye CLAIMLEDGER. La tesis está en el [rector](documento-rector.m
 
 ## Spec-driven (SDD)
 
-Cambio activo: `openspec/changes/fase-0-kernel/`.
+Cambio activo: ninguno. La fase 10 queda diferida. El estado de cada fase está en [plan-implementacion.md](plan-implementacion.md). La fase 0 está archivada en `openspec/changes/archive/2026-09-23-fase-0-kernel/`.
 
 Orden de trabajo: [plan-implementacion.md](plan-implementacion.md).
 

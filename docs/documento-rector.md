@@ -366,7 +366,7 @@ Abstenerse si: período/scope/métrica/issuer ambiguos o ausentes, valor sin evi
 Verified: `status`, claim (issuer, period, statement, scope, metric, value, currency), evidence (document_id, page, text).  
 Abstained: `{ "status": "abstained", "reason": "no_verified_claim" }`.
 
-Más adelante la evidencia suma **recorte de página** (imagen de la fila o tabla, recuadro de Docling). El contrato chico no espera esa imagen el primer día.
+La ficha puede sumar el **recorte de página** (imagen de la fila, recuadro de Docling). El contrato chico de `POST /claims/query` no lleva esa imagen.
 
 Cuando la pregunta pida varios períodos (“últimos 4 trimestres”), la API responde una **serie**: lista de claims verificados (o huecos). Open WebUI dibuja esa serie. No construye los valores.
 
@@ -397,7 +397,7 @@ CLAIMLEDGER nace vacío. La primera fase **no** es el PDF. Es el contrato del ke
 BYMA PDFs → Docling → evidencia → CLAIMLEDGER → LlamaIndex retrieve → Open WebUI
 ```
 
-Graph, orquestador, VLM, Neo4j, recortes y gráficos **no** están en ese request. Entran por el gate (§24).
+Ese camino crítico (fases 0–7) está cerrado. Recorte, resta, export Cypher, gráfico y plan de cuatro trimestres entraron después, por el gate (§24). El VLM no entró.
 
 | Fase | Plano | Qué | Cierre |
 |------|-------|-----|--------|
@@ -414,6 +414,8 @@ Graph, orquestador, VLM, Neo4j, recortes y gráficos **no** están en ese reques
 | 12 | Interacción **nivel 3** | Gráficos de serie verificada | Gate: ¿ya hay Claim Query de serie? |
 | 13 | Interacción **nivel 2–3** | Orquestador + tools (no un agente por función) | Gate: ¿la pregunta es compuesta? |
 | Después | — | XBRL, slides, aire-gap, multi-agent real (nivel 4) | No es el primer día |
+
+Esa tabla es el plan. El estado al 2026-10-07 está en [plan-implementacion.md](plan-implementacion.md). En corto: las fases 0–9 y 11–13 están cerradas. La 10 está diferida. La 11 exporta Cypher y no levanta Neo4j. La 12 es un fence Mermaid. La 13 es un plan determinista que llama a `query`.
 
 ---
 
@@ -519,27 +521,27 @@ Claimprint local a portar: `schemas/claim.py`, `schemas/lookup.py`, `evals/ident
 
 Esto no cambia el north star. Solo dice **en qué momento** se usa cada idea.
 
-**Ahora no (Fase 0).** Solo el contrato y los casos de prueba. Sin PDF, sin modelo, sin pantalla.
+**Fase 0 — hecha.** El contrato y los casos de prueba. Los tests del kernel siguen sin PDF, sin modelo y sin pantalla.
 
-**Cuando leamos el PDF (Fase 1).** Usar la estructura de Docling: la tabla como tabla, no como texto plano; ignorar encabezados y pies que ensucian emisor/fecha. Comparar dos formas de leer tablas. MinerU no se instala. El VLM todavía no: primero el lector estándar.
+**Fase 1 — hecha.** La estructura de Docling: la tabla como tabla, no como texto plano; encabezados y pies fuera del body. MinerU no se instala. El VLM sigue diferido.
 
-**Cuando armamos el libro (Fase 2).** Escribir nodos con IDs que el kernel ya resolvió. Fusionar EEFF + comunicado + presentación del mismo período. El conflicto se muestra, no se tapa.
+**Fase 2 — hecha.** Nodos con IDs que el kernel ya resolvió. EEFF, comunicado y presentación del mismo período entran al grafo. El claim financiero queda fuera. El conflicto se muestra, no se tapa.
 
-**Cuando buscamos (Fase 3).** Dos cajones: uno de tablas (números) y uno de narrativa (explicar después). Mezclarlos es cómo un chat se come la fila de al lado.
+**Fase 3 — hecha.** Dos cajones: uno de tablas (números) y uno de narrativa. Mezclarlos es cómo un chat se come la fila de al lado.
 
-**Cuando verificamos (Fase 4–7).** La pantalla enseña el error: “encontré estas dos filas; verifiqué la consolidada”. Ficha con sello VERIFICADO / ME ABSTENGO, chips (BYMA · 1T26 · Consolidado · Resultado neto) y el texto de la fila. El chat, si existe, habla **después** de la ficha.
+**Fases 4–7 — hechas.** La pantalla enseña el error: “encontré estas dos filas; verifiqué la consolidada”. Ficha con sello VERIFICADO / ME ABSTENGO, chips (BYMA · 1T26 · Consolidado · Resultado neto) y el texto de la fila. El chat habla **después** de la ficha.
 
-**Más adelante (Fase 8).** Recorte propio: la zona de la página que Docling ya marcó, junto al claim. No es “el visor de otra plataforma”. Es nuestra prueba visual.
+**Fase 8 — hecha.** Recorte propio: la zona de la página que Docling ya marcó, junto al claim. Es la prueba visual propia.
 
-**Más adelante (Fase 9).** Pack de período (varios documentos, misma identidad). Comparar 1T vs 2T: dos claims verificados, lado a lado; la diferencia la calcula código.
+**Fase 9 — hecha.** Pack de período. Comparar 1T vs 2T devuelve dos claims verificados; la diferencia la calcula código, fuera del kernel.
 
-**Más adelante (Fase 10).** VLM: un modelo que **mira** la página cuando el lector estándar se traba (tabla rara, gráfico de una presentación). Entrega la misma estructura. El kernel sigue decidiendo. Si no iguala los casos de prueba, no se cambian los casos de prueba.
+**Fase 10 — diferida.** VLM: un modelo que **mira** la página cuando el lector estándar se traba. Entrega la misma estructura. El kernel sigue decidiendo. Si no iguala los casos de prueba, no se cambian los casos de prueba. No hay GPU para correrlo, así que el cambio no se abrió.
 
-**Más adelante (Fase 11).** Neo4j / Cypher para preguntarle al libro: “todos los resultados netos de BYMA”. No para inventar el número.
+**Fase 11 — hecha, sin base Neo4j.** El libro exporta Cypher. La pregunta “todos los resultados netos de BYMA” lee los períodos de ese script y verifica cada uno con `query`. El script no guarda la cifra. No hay servidor Neo4j.
 
-**Más adelante (Fase 12).** Gráficos de series verificadas. Pregunta: “compará el neto de los últimos 4 trimestres”. CLAIMLEDGER verifica Q1…Q4. Open WebUI dibuja barras / torta / línea. Debajo: Sources → claims → documentos → páginas. Si un trimestre se abstiene, esa barra queda vacía. Nadie inventa el 4º número para que el gráfico “se vea lindo”.
+**Fase 12 — hecha en Mermaid.** Serie ya verificada → fence `xychart-beta`. Si un trimestre se abstiene, esa barra no se inventa: queda la línea `Hueco:`. matplotlib y Artifact no entraron.
 
-**Más adelante (Fase 13).** Orquestador + ejecutores. El orquestador arma el plan (cuatro trimestres, en paralelo). Los ejecutores buscan y explican. El kernel verifica. No un enjambre que “sepa contabilidad”. Ver §22.
+**Fase 13 — hecha en código.** El plan de los últimos cuatro trimestres llama a `query` una vez por trimestre. El kernel verifica. No es un workflow de LlamaIndex ni un enjambre que “sepa contabilidad”. Ver §22.
 
 **Todavía más tarde.** Segunda firma XBRL. Datos de gráficos de PowerPoint. Todo el parse puede correr sin internet.
 
