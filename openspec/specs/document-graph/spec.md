@@ -2,19 +2,27 @@
 
 ## Purpose
 
-Ingest-time graph.
+Ingest-time graph. The same build writes a Cypher script. The script is not a second book of claim values.
 
 ## Requirements
 
 ### Requirement: Entities, Write Once, Import
 
-Nodes MUST be only Document, Issuer, Period, and Statement. FinancialClaim, scope, metric, value, P&L extraction, `run_pipeline`, and Neo4j MUST be absent. The graph MUST be written once. A question MUST NOT rebuild it. Only `src/claimledger/graph/` MAY import `docling-graph==1.9.1`.
+Nodes MUST be only Document, Issuer, Period, and Statement. FinancialClaim, scope, metric, value, P&L extraction, `run_pipeline`, and a Neo4j driver MUST be absent. The graph MUST be written once as `graph.json`, and the same build MUST write `graph.cypher` with `CypherExporter`. The script MUST NOT contain a claim value. A question MUST NOT rebuild it. Only `src/claimledger/graph/` MAY import `docling-graph==1.9.1`.
 
 #### Scenario: Closed pack
 
 - GIVEN a period pack, one stored graph, and kernel, ingest, and graph imports
 - WHEN it is built, a question is asked, and imports are checked
 - THEN only those four types MUST exist, with no rebuild or P&L, and only the graph package MAY import `docling-graph==1.9.1`
+
+#### Scenario: Script has the period and not the digits
+
+- GIVEN one stored EEFF for 1T26
+- WHEN `build` runs
+- THEN `graph.cypher` MUST contain `2026-03-31`
+- AND it MUST NOT contain `21262335`
+- AND the directory MUST contain only `graph.json` and `graph.cypher`
 
 ### Requirement: IDs, Fold, Conflict
 

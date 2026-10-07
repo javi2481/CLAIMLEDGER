@@ -107,6 +107,8 @@ def _stamp_provenance(graph, sources: Sequence[GraphSource]) -> None:
 
 
 def _export(graph, path: Path) -> None:
+    from docling_graph.core.exporters.cypher_exporter import CypherExporter
     from docling_graph.core.exporters.json_exporter import JSONExporter
 
     JSONExporter().export(graph, path)
+    CypherExporter().export(graph, path.with_suffix(".cypher"))

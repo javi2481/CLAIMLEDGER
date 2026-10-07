@@ -2,13 +2,13 @@
 
 ## Purpose
 
-Slim Open WebUI draws one existing card. The host calls `measure` then `render_card`. For a verified series it appends a Mermaid fence built from that result. For the last four quarters it runs the fixed plan, then that fence with holes. It does not calculate a bar height or a missing quarter.
+Slim Open WebUI draws one existing card. The host calls `measure` then `render_card`. For a verified series it appends a Mermaid fence built from that result. For the last four quarters it runs the fixed plan, then that fence with holes. For every net result of BYMA it reads the Cypher script, verifies each period, and appends that fence. It does not calculate a bar height or a missing quarter.
 
 ## Requirements
 
 ### Requirement: Measure Then Card
 
-The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist. It MUST call `measure(artifact_hash, question)` then `render_card`. For a compare result it MAY call the difference function on that same `QueryResult` and pass the string to `render_card`; it MUST NOT calculate the number itself. `card_text` MUST stay first in the same assistant completion and MUST remain exactly that card: seal, chips, ordered rows, kernel values, the difference line only when the card set it, and a sentence the card already set. A page-crop PNG MAY follow that text in the same completion. When the result is a verified series, a Mermaid fence from `draw(series_spec(result))` MUST follow the card and any pictures in that same completion. A last-four-quarters question MUST go through `execute` instead of one compare `query`: the fence MUST include the holes, and the two-figure difference line MUST stay off that completion. The host MUST NOT parse digits or let an LLM choose `21262335`, `21259769`, the difference, or a bar height. `POST /claims/query` MUST stay the only product route, with no added candidates, no `delta`, and no fence.
+The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist. It MUST call `measure(artifact_hash, question)` then `render_card`. For a compare result it MAY call the difference function on that same `QueryResult` and pass the string to `render_card`; it MUST NOT calculate the number itself. `card_text` MUST stay first in the same assistant completion and MUST remain exactly that card: seal, chips, ordered rows, kernel values, the difference line only when the card set it, and a sentence the card already set. A page-crop PNG MAY follow that text in the same completion. When the result is a verified series, a Mermaid fence from `draw(series_spec(result))` MUST follow the card and any pictures in that same completion. A last-four-quarters question MUST go through `execute` instead of one compare `query`: the fence MUST include the holes, and the two-figure difference line MUST stay off that completion. A question for every net result of BYMA MUST go through `ask` when the script has periods: the fence MUST copy the verified values, and the two-figure difference line MUST stay off that completion. Without a script that question MUST abstain. The host MUST NOT parse digits or let an LLM choose `21262335`, `21259769`, the difference, or a bar height. `POST /claims/query` MUST stay the only product route, with no added candidates, no `delta`, and no fence.
 
 #### Scenario: Consolidated value
 
@@ -51,6 +51,21 @@ The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist.
 - AND the bar line MUST be `bar [21262335, 81956525]`
 - AND the text MUST contain `Hueco: 2025-09-30` and `Hueco: 2025-12-31`
 - AND `60694190` MUST NOT appear
+
+#### Scenario: All net results
+
+- GIVEN a stubbed reader and a script with both book periods
+- WHEN the host completes “todos los resultados netos de BYMA”
+- THEN the body MUST start with the card
+- AND the bar line MUST be `bar [21262335, 81956525]`
+- AND `60694190` MUST NOT appear
+
+#### Scenario: HTTP stays one query
+
+- GIVEN `POST /claims/query` and “todos los resultados netos de BYMA”
+- WHEN the route answers
+- THEN the status MUST be `abstained`
+- AND the body MUST NOT contain `21262335` or a Mermaid fence
 
 ### Requirement: Always That Card
 
@@ -116,19 +131,19 @@ The screen opened MUST be only `ghcr.io/open-webui/open-webui:v0.11.4-slim`. It 
 
 ### Requirement: Closed Bounds
 
-`dependencies` MUST stay `[]`. The HTTP extra pin MUST stay `starlette==1.0.0`. The 13-path allowlist and empty `src/claimledger/__init__.py` MUST stay. `src/claimledger/chart/` and `src/claimledger/orchestrate/` MUST stay off that allowlist. Gold MUST stay `21262335` and `21259769`; `cp-*` expected values MUST stay the pairs. Kernel tests MUST NOT import `docling` and MUST NOT use Docker, network, or PDF. Host tests MUST stay in-process, with no bound port, Docker, network, or PDF. Phases 10 and 11 MUST NOT start. `http-query` and `gold-regression` MUST stay unchanged.
+`dependencies` MUST stay `[]`. The HTTP extra pin MUST stay `starlette==1.0.0`. The 13-path allowlist and empty `src/claimledger/__init__.py` MUST stay. `src/claimledger/chart/`, `src/claimledger/orchestrate/`, and `src/claimledger/book/` MUST stay off that allowlist. Gold MUST stay `21262335` and `21259769`; `cp-*` expected values MUST stay the pairs. Kernel tests MUST NOT import `docling` and MUST NOT use Docker, network, or PDF. Host tests MUST stay in-process, with no bound port, Docker, network, or PDF. Phase 10 MUST NOT start. `http-query` and `gold-regression` MUST stay unchanged.
 
 #### Scenario: Allowlist and kernel bans
 
 - GIVEN kernel tests and `pyproject.toml`
 - WHEN they run
 - THEN `dependencies` MUST be `[]` and the allowlist MUST stay 13 paths
-- AND no allowlist path MUST contain `chart` or `orchestrate`
+- AND no allowlist path MUST contain `chart`, `orchestrate`, or `book`
 - AND kernel tests MUST NOT import `docling` or use Docker, network, or PDF
 
 #### Scenario: Later phases wait
 
 - GIVEN this change
 - WHEN scope is checked
-- THEN phases 10 and 11 MUST NOT start
+- THEN phase 10 MUST NOT start
 - AND `POST /claims/query` MUST NOT carry `delta`

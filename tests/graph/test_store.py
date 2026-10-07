@@ -32,14 +32,12 @@ _FORBIDDEN_NAMES = frozenset(
         "FinancialClaim",
         "VLMConfig",
         "LLMConfig",
-        "CypherExporter",
         "Neo4j",
     }
 )
 _FORBIDDEN_IMPORT_PARTS = (
     "neo4j",
     "llm_clients",
-    "cypher",
     "run_pipeline",
     "ProvenanceBinder",
 )
@@ -113,8 +111,17 @@ def test_build_writes_graph_json_once_and_load_does_not_rebuild(
         "2026-03-31"
     }
 
+    cypher_path = path.with_suffix(".cypher")
+    cypher = cypher_path.read_text(encoding="utf-8")
+    assert 'n.period = "2026-03-31"' in cypher
+    assert "21262335" not in cypher
+    assert "81956525" not in cypher
+
     build([source])
-    assert sorted(item.name for item in path.parent.iterdir()) == ["graph.json"]
+    assert sorted(item.name for item in path.parent.iterdir()) == [
+        "graph.cypher",
+        "graph.json",
+    ]
 
     marker = {
         "nodes": [
@@ -154,6 +161,14 @@ def test_graph_package_forbids_pipeline_llm_vlm_binder_neo4j_and_pl() -> None:
     assert 'conflicts="keep-all"' in build_text
     assert "export_format=None" in build_text
     assert "JSONExporter" in build_text
+    assert "CypherExporter" in build_text
+    imported = {
+        node.module
+        for node in ast.walk(build_tree)
+        if isinstance(node, ast.ImportFrom) and node.module
+    }
+    assert "docling_graph.core.exporters.cypher_exporter" in imported
+    assert not any("neo4j" in module.lower() for module in imported)
     assert "GraphConverter" in build_text
     assert "GraphMerger" in build_text
     assert "MergePolicy" in build_text

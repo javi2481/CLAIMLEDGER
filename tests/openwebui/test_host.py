@@ -81,6 +81,13 @@ _PARENT_QUESTION = "resultado atribuible a la controlante 1T26"
 _ABSTAIN_QUESTION = "resultado neto del período en la memoria anual"
 _COMPARE_QUESTION = "Comparar resultado neto consolidado 1T26 vs 2T26"
 _SERIES_QUESTION = "Compará el resultado neto consolidado de los últimos 4 trimestres"
+_BOOK_QUESTION = "todos los resultados netos de BYMA"
+_BOOK_SCRIPT = """
+MERGE (n:Period {id: "2026-03-31"})
+SET n.period = "2026-03-31";
+MERGE (n:Period {id: "2026-06-30"})
+SET n.period = "2026-06-30";
+"""
 _CONSOLIDATED_VALUE = "21262335"
 _PARENT_VALUE = "21259769"
 _SECOND_QUARTER_VALUE = "81956525"
@@ -249,6 +256,40 @@ def test_reply_last_four_quarters_leaves_holes(
     assert "60694190" not in text
     assert _CONSOLIDATED_VALUE in text
     assert _SECOND_QUARTER_VALUE in text
+
+
+def test_reply_all_net_results_draws_the_book(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    digest = _prepare_neighbors(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "claimledger.openwebui.reply.read_script",
+        lambda: _BOOK_SCRIPT,
+        raising=False,
+    )
+
+    text = reply(digest, _BOOK_QUESTION)
+
+    assert text.startswith("VERIFICADO\n")
+    assert "bar [21262335, 81956525]" in text
+    assert "60694190" not in text
+
+
+def test_reply_all_net_results_without_script_abstains(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    digest = _prepare_neighbors(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "claimledger.openwebui.reply.read_script",
+        lambda: "",
+        raising=False,
+    )
+
+    text = reply(digest, _BOOK_QUESTION)
+
+    assert "ME ABSTENGO" in text
+    assert "81956525" not in text
+    assert "```mermaid" not in text
 
 
 _PAGE = 10
@@ -750,6 +791,7 @@ def test_wave_c_still_waits() -> None:
     assert "period" in packages
     assert "chart" in packages
     assert "orchestrate" in packages
+    assert "book" in packages
     assert packages.isdisjoint({"charts"})
 
     active = [
@@ -759,9 +801,9 @@ def test_wave_c_still_waits() -> None:
     ]
     assert any((repo / "openspec" / "changes" / "archive").glob("*-fase-8-crop"))
     assert "fase-8-crop" not in active
-    assert not any(
-        name.startswith(("fase-10", "fase-11")) for name in active
-    )
+    assert any((repo / "openspec" / "changes" / "archive").glob("*-fase-11-neo4j"))
+    assert "fase-11-neo4j" not in active
+    assert not any(name.startswith(("fase-10", "fase-11")) for name in active)
 
 
 def _kernel_allowlist() -> tuple[str, ...]:
@@ -836,6 +878,11 @@ def test_query_and_card_stay_picture_free() -> None:
     assert "mermaid" not in compared_dump
     series = claims_query({"question": _SERIES_QUESTION}, Ledger.seed())
     series_dump = json.dumps(series)
+    book = claims_query({"question": _BOOK_QUESTION}, Ledger.seed())
+    book_dump = json.dumps(book)
+    assert book["status"] == "abstained"
+    assert "21262335" not in book_dump
+    assert "mermaid" not in book_dump
     assert "mermaid" not in series_dump
     assert "xychart" not in series_dump
     assert "60694190" not in series_dump
@@ -883,6 +930,7 @@ def test_query_and_card_stay_picture_free() -> None:
     assert not any("period" in path for path in allowlist)
     assert not any("chart" in path for path in allowlist)
     assert not any("orchestrate" in path for path in allowlist)
+    assert not any("book" in path for path in allowlist)
     assert ("2026-03-31", "consolidated", "net_income", "21262335") in RECIPE_ROWS
     assert ("2026-03-31", "parent_attributable", "net_income", "21259769") in RECIPE_ROWS
     gold = (repo / "tests" / "test_gold_v1.py").read_text(encoding="utf-8")
