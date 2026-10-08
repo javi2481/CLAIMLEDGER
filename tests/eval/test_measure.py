@@ -1,39 +1,37 @@
-"""Measure joins tables retrieve, understand, and query on a ledger."""
+"""Measure is understand then query. Rows come from verified evidence."""
 
 from __future__ import annotations
 
 import ast
-import hashlib
-import json
-from dataclasses import fields
+import inspect
+from dataclasses import replace
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
-import claimledger.ingest.store as ingest_store
 import claimledger.ledger as ledger_mod
 import claimledger.lookup as lookup_mod
 import claimledger.query as query_mod
-import claimledger.retrieval.drawers as drawers_mod
+from claimledger.card.candidate import Candidate
 from claimledger.claim import FinancialClaim
-from claimledger.ledger import RECIPE_ROWS
+from claimledger.evidence import FinancialEvidence
+from claimledger.identity import identity_key
+from claimledger.ledger import RECIPE_ROWS, Ledger
 from claimledger.query import QueryResult
-from claimledger.retrieval.drawers import Candidate
 
 
-CONSOLIDATED_ROW = "RESULTADO NETO DEL PERÍODO 21.262.335"
-PARENT_ROW = "Resultado neto atribuible a la sociedad controlante 21.259.769"
 CONSOLIDATED_QUESTION = (
     "¿Cuál es el RESULTADO NETO DEL PERÍODO consolidado del 1T26?"
 )
 PARENT_QUESTION = "resultado atribuible a la controlante 1T26"
+COMPARE_QUESTION = "Comparar resultado neto consolidado 1T26 vs 2T26"
 CONSOLIDATED_VALUE = "21262335"
 PARENT_VALUE = "21259769"
 SECOND_QUARTER_VALUE = "81956525"
-SEED_UPSERTS = 14
+EVIDENCE_TEXT = "21.262.335"
+LABEL = "RESULTADO NETO DEL PERÍODO"
+SHARED_HASH = "shared-artifact"
 NARRATIVE_TEXT = "política contable de reconocimiento de ingresos"
-COMPARE_QUESTION = "Comparar resultado neto consolidado 1T26 vs 2T26"
 RECIPE_QUESTIONS = (
     "resultado neto del período en la memoria anual",
     "¿Cuál es el resultado neto consolidado del comunicado de prensa?",
@@ -55,99 +53,7 @@ KERNEL_ALLOWLIST = (
     "tests/test_gold_v1.py",
     "tests/test_gold_v2.py",
 )
-
-
-def _canonical_json_bytes(payload: dict) -> bytes:
-    return json.dumps(
-        payload,
-        ensure_ascii=False,
-        sort_keys=True,
-        separators=(",", ":"),
-    ).encode("utf-8")
-
-
-def _sha256_hex(data: bytes) -> str:
-    return hashlib.sha256(data).hexdigest()
-
-
-def _use_artifacts(monkeypatch: pytest.MonkeyPatch, root: Path) -> None:
-    monkeypatch.setattr(ingest_store, "artifacts_dir", lambda: root)
-
-
-def _write_artifact(root: Path, payload: dict) -> str:
-    raw = _canonical_json_bytes(payload)
-    digest = _sha256_hex(raw)
-    (root / f"{digest}.json").write_bytes(raw)
-    return digest
-
-
-def _node(text: str, label: str, ref: str) -> dict[str, str]:
-    return {"text": text, "label": label, "ref": ref}
-
-
-def _neighbor_payload() -> dict:
-    return {
-        "parsed_nodes": [
-            _node("Estado de Resultados", "section_header", "#/texts/0"),
-            _node(CONSOLIDATED_ROW, "table", "#/tables/1"),
-            _node(PARENT_ROW, "table", "#/tables/1"),
-            _node("política contable de reconocimiento de ingresos", "text", "#/texts/4"),
-        ]
-    }
-
-
-def _parsed_nodes(payload: dict) -> list[SimpleNamespace]:
-    return [
-        SimpleNamespace(
-            text=item["text"],
-            metadata={"doc_items": [{"self_ref": item["ref"], "label": item["label"]}]},
-        )
-        for item in payload["parsed_nodes"]
-    ]
-
-
-def _install_parsed_reader(monkeypatch: pytest.MonkeyPatch) -> None:
-    from claimledger.retrieval import read as read_mod
-
-    def fake_read(artifact_hash: str) -> list[SimpleNamespace]:
-        return _parsed_nodes(ingest_store.load(artifact_hash))
-
-    monkeypatch.setattr(read_mod, "read_hashed_json", fake_read)
-
-
-def _forbid_io(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
-    calls = {"load_or_convert": 0, "convert_pdf": 0, "convert_local": 0, "urlopen": 0}
-
-    def _count(key: str):
-        def _inner(*_args: object, **_kwargs: object) -> None:
-            calls[key] += 1
-
-        return _inner
-
-    monkeypatch.setattr(ingest_store, "load_or_convert", _count("load_or_convert"))
-    monkeypatch.setattr(
-        "claimledger.ingest.parse.convert_pdf", _count("convert_pdf")
-    )
-    monkeypatch.setattr(
-        "claimledger.ingest.parse.convert_local", _count("convert_local")
-    )
-    monkeypatch.setattr(
-        "claimledger.ingest.store.convert_local", _count("convert_local")
-    )
-    monkeypatch.setattr("urllib.request.urlopen", _count("urlopen"))
-    return calls
-
-
-def _prepare(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> tuple[str, dict[str, int]]:
-    artifacts = tmp_path / "docling"
-    artifacts.mkdir()
-    _use_artifacts(monkeypatch, artifacts)
-    digest = _write_artifact(artifacts, _neighbor_payload())
-    io_calls = _forbid_io(monkeypatch)
-    _install_parsed_reader(monkeypatch)
-    return digest, io_calls
+REPO = Path(__file__).resolve().parents[2]
 
 
 def _import_measure():
@@ -156,39 +62,43 @@ def _import_measure():
     return measure_mod.measure, measure_mod
 
 
-def _book() -> ledger_mod.Ledger:
-    return ledger_mod.Ledger.seed()
+def _evidence(text: str, label: str = LABEL, digest: str = SHARED_HASH) -> FinancialEvidence:
+    return FinancialEvidence(
+        document_id="#/tables/1",
+        artifact_hash=digest,
+        page=1,
+        text=text,
+        label=label,
+    )
+
+
+def _attach(
+    book: Ledger,
+    period: str,
+    scope: str,
+    evidence: tuple[FinancialEvidence, ...],
+) -> None:
+    key = identity_key("BYMA", period, "income_statement", scope, "net_income")
+    current = book.get(key)
+    assert current is not None
+    book.upsert(replace(current, evidence=evidence))
 
 
 class _Calls:
     def __init__(self) -> None:
         self.order: list[str] = []
-        self.retrieve_args: list[tuple[object, ...]] = []
         self.understand_args: list[str] = []
         self.intents: list[object] = []
         self.query_intents: list[object] = []
         self.ledgers: list[object] = []
         self.seeded: list[object] = []
-        self.query_inside_retrieve = 0
-        self.query_from_caller = 0
-        self._in_retrieve = False
 
 
 def _spy_pipeline(monkeypatch: pytest.MonkeyPatch, measure_mod: object) -> _Calls:
     seen = _Calls()
-    real_retrieve = drawers_mod.retrieve
     real_understand = lookup_mod.understand
     real_query = query_mod.query
     real_seed = ledger_mod.Ledger.seed
-
-    def spy_retrieve(artifact_hash: str, drawer: str, question: str):
-        seen.order.append("retrieve")
-        seen.retrieve_args.append((artifact_hash, drawer, question))
-        seen._in_retrieve = True
-        try:
-            return real_retrieve(artifact_hash, drawer, question)
-        finally:
-            seen._in_retrieve = False
 
     def spy_understand(question: str):
         seen.order.append("understand")
@@ -201,10 +111,6 @@ def _spy_pipeline(monkeypatch: pytest.MonkeyPatch, measure_mod: object) -> _Call
         seen.order.append("query")
         seen.query_intents.append(intent)
         seen.ledgers.append(ledger)
-        if seen._in_retrieve:
-            seen.query_inside_retrieve += 1
-        else:
-            seen.query_from_caller += 1
         return real_query(intent, ledger)
 
     def spy_seed() -> object:
@@ -212,175 +118,236 @@ def _spy_pipeline(monkeypatch: pytest.MonkeyPatch, measure_mod: object) -> _Call
         seen.seeded.append(ledger)
         return ledger
 
-    monkeypatch.setattr(drawers_mod, "retrieve", spy_retrieve)
     monkeypatch.setattr(lookup_mod, "understand", spy_understand)
     monkeypatch.setattr(query_mod, "query", spy_query)
+    monkeypatch.setattr(measure_mod, "understand", spy_understand)
+    monkeypatch.setattr(measure_mod, "query", spy_query)
     monkeypatch.setattr(ledger_mod.Ledger, "seed", staticmethod(spy_seed))
-    for name, spy in (
-        ("retrieve", spy_retrieve),
-        ("understand", spy_understand),
-        ("query", spy_query),
-    ):
-        if hasattr(measure_mod, name):
-            monkeypatch.setattr(measure_mod, name, spy)
     return seen
 
 
-def _spy_upsert(monkeypatch: pytest.MonkeyPatch) -> dict[str, int]:
-    calls = {"n": 0}
-    real_upsert = ledger_mod.Ledger.upsert
-
-    def spy_upsert(self: object, claim: FinancialClaim) -> FinancialClaim:
-        calls["n"] += 1
-        return real_upsert(self, claim)
-
-    monkeypatch.setattr(ledger_mod.Ledger, "upsert", spy_upsert)
-    return calls
+def _measure_source() -> str:
+    return (REPO / "src" / "claimledger" / "eval" / "measure.py").read_text(encoding="utf-8")
 
 
-def _assert_quiet_io(io_calls: dict[str, int]) -> None:
-    assert io_calls["load_or_convert"] == 0
-    assert io_calls["convert_pdf"] == 0
-    assert io_calls["convert_local"] == 0
-    assert io_calls["urlopen"] == 0
+def _repo_file(relative: str) -> str:
+    return (REPO / relative).read_text(encoding="utf-8")
 
 
-def _assert_both_neighbors(candidates: tuple[Candidate, ...]) -> None:
-    assert [item.text for item in candidates] == [CONSOLIDATED_ROW, PARENT_ROW]
+def test_measure_signature_is_question_and_ledger() -> None:
+    measure, _measure_mod = _import_measure()
+    assert tuple(inspect.signature(measure).parameters) == ("question", "ledger")
+    source = _measure_source()
+    assert "artifact_hash" not in source
+    assert "retrieve" not in source
+    assert "recorded_book" not in source
+    assert "Ledger.seed" not in source
+    assert "difference" not in source
+    assert "docling" not in source
 
 
-def _assert_recorded_value(result: QueryResult, value: str, rejected: str) -> None:
-    assert isinstance(result, QueryResult)
-    assert result.status == "verified"
-    assert [claim.value for claim in result.claims] == [value]
-    assert rejected not in [claim.value for claim in result.claims]
-    assert [claim.ledger_status for claim in result.claims] == ["recorded"]
-
-
-def test_slice1_call_order_and_both_neighbors(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_understand_then_query_on_the_passed_ledger(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
     measure, measure_mod = _import_measure()
-    book = _book()
+    book = Ledger.seed()
     seen = _spy_pipeline(monkeypatch, measure_mod)
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION, book)
+    candidates, result = measure(CONSOLIDATED_QUESTION, book)
 
-    assert seen.order == ["retrieve", "understand", "query"]
-    assert seen.retrieve_args == [(digest, "tables", CONSOLIDATED_QUESTION)]
+    assert seen.order == ["understand", "query"]
     assert seen.understand_args == [CONSOLIDATED_QUESTION]
     assert seen.query_intents == seen.intents
     assert seen.ledgers == [book]
     assert seen.seeded == []
-    _assert_both_neighbors(candidates)
+    assert candidates == ()
     assert isinstance(result, QueryResult)
-    _assert_quiet_io(io_calls)
+    assert result.status == "verified"
+    assert [claim.value for claim in result.claims] == [CONSOLIDATED_VALUE]
 
 
-def test_measure_queries_the_passed_ledger_and_does_not_seed(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_seed_rows_are_empty_for_consolidated_and_parent(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    digest, _io_calls = _prepare(tmp_path, monkeypatch)
     measure, _measure_mod = _import_measure()
-    book = ledger_mod.Ledger.seed()
-    seen = _spy_pipeline(monkeypatch, _measure_mod)
+    book = Ledger.seed()
+    monkeypatch.setattr(
+        "claimledger.ingest.ground.recorded_book",
+        lambda: (_ for _ in ()).throw(AssertionError("recorded_book")),
+    )
 
-    measure(digest, CONSOLIDATED_QUESTION, book)
+    consolidated, consolidated_result = measure(CONSOLIDATED_QUESTION, book)
+    parent, parent_result = measure(PARENT_QUESTION, book)
 
-    assert seen.ledgers == [book]
-    assert seen.seeded == []
-    assert "Ledger.seed" not in _repo_file("src/claimledger/eval/measure.py")
-
-
-def test_omitted_ledger_is_the_quarterly_book(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, measure_mod = _import_measure()
-    book = _book()
-    seen = _spy_pipeline(monkeypatch, measure_mod)
-    monkeypatch.setattr(measure_mod, "_quarterly_book", lambda: book)
-
-    measure(digest, CONSOLIDATED_QUESTION)
-
-    assert seen.ledgers == [book]
-    assert seen.seeded == []
-    _assert_quiet_io(io_calls)
+    assert consolidated == ()
+    assert parent == ()
+    assert [claim.value for claim in consolidated_result.claims] == [CONSOLIDATED_VALUE]
+    assert PARENT_VALUE not in [claim.value for claim in consolidated_result.claims]
+    assert [claim.ledger_status for claim in consolidated_result.claims] == ["recorded"]
+    assert [claim.value for claim in parent_result.claims] == [PARENT_VALUE]
+    assert CONSOLIDATED_VALUE not in [claim.value for claim in parent_result.claims]
+    assert [claim.ledger_status for claim in parent_result.claims] == ["recorded"]
 
 
-def test_slice1_consolidated_21262335(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
+def test_evidence_text_is_one_tables_row() -> None:
     measure, _measure_mod = _import_measure()
+    book = Ledger.seed()
+    _attach(book, "2026-03-31", "consolidated", (_evidence(EVIDENCE_TEXT, digest="h1"),))
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION, _book())
+    candidates, result = measure(CONSOLIDATED_QUESTION, book)
 
-    _assert_both_neighbors(candidates)
-    _assert_recorded_value(result, CONSOLIDATED_VALUE, PARENT_VALUE)
-    _assert_quiet_io(io_calls)
+    assert len(candidates) == 1
+    assert isinstance(candidates[0], Candidate)
+    assert candidates[0].drawer == "tables"
+    assert candidates[0].text == EVIDENCE_TEXT
+    assert candidates[0].ref == "h1"
+    assert not hasattr(candidates[0], "rank")
+    assert not hasattr(candidates[0], "score")
+    assert result.claims[0].value == CONSOLIDATED_VALUE
+    assert NARRATIVE_TEXT not in [item.text for item in candidates]
 
 
-def test_slice1_parent_21259769(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
+def test_blank_evidence_text_uses_the_label() -> None:
     measure, _measure_mod = _import_measure()
+    book = Ledger.seed()
+    _attach(book, "2026-03-31", "consolidated", (_evidence("", LABEL, digest="h-blank"),))
 
-    candidates, result = measure(digest, PARENT_QUESTION, _book())
+    candidates, result = measure(CONSOLIDATED_QUESTION, book)
 
-    _assert_both_neighbors(candidates)
-    _assert_recorded_value(result, PARENT_VALUE, CONSOLIDATED_VALUE)
-    _assert_quiet_io(io_calls)
+    assert [(item.drawer, item.text, item.ref) for item in candidates] == [
+        ("tables", LABEL, "h-blank")
+    ]
+    assert result.claims[0].value == CONSOLIDATED_VALUE
 
 
-def test_slice1_no_upsert_and_not_verified(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
+def test_two_evidence_items_stay_and_shared_hash_adds_no_neighbor() -> None:
     measure, _measure_mod = _import_measure()
-    book = _book()
-    upserts = _spy_upsert(monkeypatch)
+    book = Ledger.seed()
+    shared = (
+        _evidence(EVIDENCE_TEXT, LABEL, SHARED_HASH),
+        _evidence("21.259.769", "controlante", SHARED_HASH),
+    )
+    _attach(book, "2026-03-31", "consolidated", shared)
+    _attach(
+        book,
+        "2026-03-31",
+        "parent_attributable",
+        (_evidence("21.259.769", "controlante", SHARED_HASH),),
+    )
 
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION, book)
+    consolidated, consolidated_result = measure(CONSOLIDATED_QUESTION, book)
+    parent, parent_result = measure(PARENT_QUESTION, book)
 
-    assert len(RECIPE_ROWS) == SEED_UPSERTS
-    assert upserts["n"] == 0
-    assert len(candidates) == 2
-    for candidate in candidates:
-        assert isinstance(candidate, Candidate)
-        assert [field.name for field in fields(candidate)] == ["drawer", "text", "ref"]
-        assert "verified" not in candidate.__dict__
-        assert not isinstance(candidate, FinancialClaim)
+    assert [item.text for item in consolidated] == [EVIDENCE_TEXT, "21.259.769"]
+    assert [item.ref for item in consolidated] == [SHARED_HASH, SHARED_HASH]
+    assert len(consolidated) == 2
+    assert all(item.drawer == "tables" for item in consolidated)
+    assert [item.text for item in parent] == ["21.259.769"]
+    assert consolidated_result.claims[0].value == CONSOLIDATED_VALUE
+    assert parent_result.claims[0].value == PARENT_VALUE
+
+
+def test_abstain_yields_no_candidates() -> None:
+    measure, _measure_mod = _import_measure()
+    book = Ledger.seed()
+    _attach(book, "2026-03-31", "consolidated", (_evidence(EVIDENCE_TEXT),))
+
+    for question in RECIPE_QUESTIONS:
+        candidates, result = measure(question, book)
+        assert candidates == ()
+        assert result.status == "abstained"
+        assert result.reason == "recipe_no_extract"
+        assert result.claims == ()
+        assert CONSOLIDATED_VALUE not in [claim.value for claim in result.claims]
+
+
+def test_compare_returns_two_claims_and_not_the_difference() -> None:
+    measure, _measure_mod = _import_measure()
+    book = Ledger.seed()
+
+    candidates, result = measure(COMPARE_QUESTION, book)
+
+    assert candidates == ()
+    assert result.status == "verified"
+    values = [claim.value for claim in result.claims]
+    assert values == [CONSOLIDATED_VALUE, SECOND_QUARTER_VALUE]
+    assert "60694190" not in values
+    assert len(values) == 2
+
+
+def test_compare_evidence_rows_have_no_rank() -> None:
+    measure, _measure_mod = _import_measure()
+    book = Ledger.seed()
+    _attach(book, "2026-03-31", "consolidated", (_evidence(EVIDENCE_TEXT, digest="a"),))
+    _attach(
+        book,
+        "2026-06-30",
+        "consolidated",
+        (_evidence("81.956.525", "RESULTADO NETO DEL PERÍODO", digest="b"),),
+    )
+
+    candidates, result = measure(COMPARE_QUESTION, book)
+
+    assert [item.text for item in candidates] == [EVIDENCE_TEXT, "81.956.525"]
+    assert all(item.drawer == "tables" for item in candidates)
+    assert all(not hasattr(item, "rank") for item in candidates)
+    assert [claim.value for claim in result.claims] == [
+        CONSOLIDATED_VALUE,
+        SECOND_QUARTER_VALUE,
+    ]
+    assert "60694190" not in [claim.value for claim in result.claims]
+
+
+def test_measure_does_not_upsert(monkeypatch: pytest.MonkeyPatch) -> None:
+    measure, _measure_mod = _import_measure()
+    book = Ledger.seed()
+    calls = {"n": 0}
+    real_upsert = Ledger.upsert
+
+    def spy_upsert(self: Ledger, claim: FinancialClaim) -> FinancialClaim:
+        calls["n"] += 1
+        return real_upsert(self, claim)
+
+    monkeypatch.setattr(Ledger, "upsert", spy_upsert)
+    candidates, result = measure(CONSOLIDATED_QUESTION, book)
+
+    assert len(RECIPE_ROWS) == 14
+    assert calls["n"] == 0
+    assert candidates == ()
     assert result.status == "verified"
     assert [claim.ledger_status for claim in result.claims] == ["recorded"]
-    assert "verified" not in [claim.ledger_status for claim in result.claims]
-    _assert_quiet_io(io_calls)
 
 
-def test_slice1_retrieve_query_count_stays_zero(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, measure_mod = _import_measure()
-    book = _book()
-    seen = _spy_pipeline(monkeypatch, measure_mod)
-
-    measure(digest, PARENT_QUESTION, book)
-
-    assert seen.query_inside_retrieve == 0
-    assert seen.query_from_caller == 1
-    assert seen.order == ["retrieve", "understand", "query"]
-    _assert_quiet_io(io_calls)
+def test_measure_tests_do_not_import_docling() -> None:
+    tree = ast.parse(Path(__file__).read_text(encoding="utf-8"))
+    names: list[str] = []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            names.extend(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            names.append(node.module)
+    assert names
+    assert all(name != "docling" and not name.startswith("docling.") for name in names)
 
 
-def _digits(text: str) -> str:
-    return "".join(ch for ch in text if ch.isdigit())
-
-
-def _repo_file(relative: str) -> str:
-    return (Path(__file__).resolve().parents[2] / relative).read_text(encoding="utf-8")
+def test_slice2_gold_files_not_edited() -> None:
+    v1 = _repo_file("tests/test_gold_v1.py")
+    v2 = _repo_file("tests/test_gold_v2.py")
+    for source in (v1, v2):
+        assert "Ledger.seed()" in source
+        assert "retrieve" not in source
+        tree = ast.parse(source)
+        seed_calls = [
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "seed"
+        ]
+        assert seed_calls
+    assert 'ID_01_VALUE = "21262335"' in v1
+    assert '"21259769"' in v1
+    assert "-14950948" in v2
 
 
 def _assigned_strings(tree: ast.AST, name: str) -> tuple[str, ...]:
@@ -436,123 +403,6 @@ def _allowlist_paths(tree: ast.AST) -> tuple[str, ...]:
                 if isinstance(elt, ast.Constant) and isinstance(elt.value, str)
             )
     raise AssertionError("allowlist missing")
-
-
-def test_slice2_recipe_no_extract_abstains(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, _measure_mod = _import_measure()
-
-    for question in RECIPE_QUESTIONS:
-        candidates, result = measure(digest, question, _book())
-
-        _assert_both_neighbors(candidates)
-        assert any(CONSOLIDATED_VALUE in _digits(item.text) for item in candidates)
-        assert result.status == "abstained"
-        assert result.reason == "recipe_no_extract"
-        assert result.claims == ()
-        assert CONSOLIDATED_VALUE not in [claim.value for claim in result.claims]
-    _assert_quiet_io(io_calls)
-
-
-def test_slice2_compare_two_claims(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, _measure_mod = _import_measure()
-
-    candidates, result = measure(digest, COMPARE_QUESTION, _book())
-
-    _assert_both_neighbors(candidates)
-    assert result.status == "verified"
-    values = [claim.value for claim in result.claims]
-    assert values == [CONSOLIDATED_VALUE, SECOND_QUARTER_VALUE]
-    difference = str(abs(int(SECOND_QUARTER_VALUE) - int(CONSOLIDATED_VALUE)))
-    assert difference not in values
-    assert len(values) == 2
-    _assert_quiet_io(io_calls)
-
-
-def test_slice2_narrative_not_number_source(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, measure_mod = _import_measure()
-    book = _book()
-    seen = _spy_pipeline(monkeypatch, measure_mod)
-
-    candidates, result = measure(digest, CONSOLIDATED_QUESTION, book)
-
-    assert seen.retrieve_args == [(digest, "tables", CONSOLIDATED_QUESTION)]
-    assert len(seen.retrieve_args) == 1
-    _assert_both_neighbors(candidates)
-    assert NARRATIVE_TEXT not in [item.text for item in candidates]
-    assert all(item.drawer == "tables" for item in candidates)
-    _assert_recorded_value(result, CONSOLIDATED_VALUE, PARENT_VALUE)
-    assert NARRATIVE_TEXT not in [claim.value for claim in result.claims]
-    assert seen.query_inside_retrieve == 0
-    _assert_quiet_io(io_calls)
-
-
-def test_slice2_empty_question_keeps_both_rows(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, measure_mod = _import_measure()
-    book = _book()
-    seen = _spy_pipeline(monkeypatch, measure_mod)
-
-    candidates, _result = measure(digest, "", book)
-
-    assert seen.retrieve_args == [(digest, "tables", "")]
-    _assert_both_neighbors(candidates)
-    _assert_quiet_io(io_calls)
-
-
-def test_slice2_shared_ref_does_not_select(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    digest, io_calls = _prepare(tmp_path, monkeypatch)
-    measure, _measure_mod = _import_measure()
-
-    for question, value, rejected in (
-        (CONSOLIDATED_QUESTION, CONSOLIDATED_VALUE, PARENT_VALUE),
-        (PARENT_QUESTION, PARENT_VALUE, CONSOLIDATED_VALUE),
-    ):
-        candidates, result = measure(digest, question, _book())
-        assert [item.ref for item in candidates] == ["#/tables/1", "#/tables/1"]
-        _assert_both_neighbors(candidates)
-        _assert_recorded_value(result, value, rejected)
-    _assert_quiet_io(io_calls)
-
-
-def test_slice2_gold_files_not_edited() -> None:
-    v1 = _repo_file("tests/test_gold_v1.py")
-    v2 = _repo_file("tests/test_gold_v2.py")
-    for source in (v1, v2):
-        assert "Ledger.seed()" in source
-        assert "retrieve" not in source
-        tree = ast.parse(source)
-        seed_calls = [
-            node
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Call)
-            and isinstance(node.func, ast.Attribute)
-            and node.func.attr == "seed"
-        ]
-        assert seed_calls
-        retrieve_calls = [
-            node
-            for node in ast.walk(tree)
-            if isinstance(node, ast.Call)
-            and (
-                (isinstance(node.func, ast.Name) and node.func.id == "retrieve")
-                or (isinstance(node.func, ast.Attribute) and node.func.attr == "retrieve")
-            )
-        ]
-        assert retrieve_calls == []
-    assert "-14950948" in v2
 
 
 def test_slice2_eval_outside_allowlist() -> None:

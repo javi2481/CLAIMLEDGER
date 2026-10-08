@@ -1,14 +1,30 @@
-# Open WebUI Host Specification
+# Delta for OpenWebUI-Host
 
-## Purpose
+## ADDED Requirements
 
-Slim Open WebUI draws one existing card. The host calls `measure` then `render_card`. For a verified series it appends a Mermaid fence built from that result. For the last four quarters it runs the fixed plan, then that fence with holes. For every net result of BYMA it reads the Cypher script, verifies each period, and appends that fence. It does not calculate a bar height or a missing quarter. After card/pictures/fence, the host may append agent-host-gated prose or the controlled abstention template.
+### Requirement: Product Image Without Retrieval Extra
 
-## Requirements
+The product image MUST install `.[http,deepseek]` and MUST NOT install the `retrieval` extra. That extra MAY stay declared for optional offline RAG and its tests. `dependencies` MUST stay `[]`.
+
+#### Scenario: Image extras
+
+- GIVEN the product Dockerfile
+- WHEN the install line is read
+- THEN it MUST install `.[http,deepseek]` and MUST NOT install `retrieval`
+
+#### Scenario: Declared extra stays off the image
+
+- GIVEN `pyproject.toml` still declares a `retrieval` extra
+- WHEN the product image is built
+- THEN that extra MUST NOT be installed
+
+## MODIFIED Requirements
 
 ### Requirement: Measure Then Card
 
 The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist. `reply`, `measure`, and card MUST NOT import `claimledger.retrieval` or `DoclingReader` and MUST NOT call `retrieve()`. The host MUST call `recorded_book()` once per completion and pass that same ledger to `execute`, `ask`, and `measure(question, ledger)`, then `render_card`. It MUST NOT call `Ledger.seed()`. Card candidates MUST be one `tables` row per verified evidence item (`text` is `evidence.text` when non-empty, otherwise `label`; `ref` is `evidence.artifact_hash`); abstain or empty evidence MUST yield `()`. It MUST NOT invent neighbor rows. For a compare result it MAY call the difference function on that same `QueryResult` and pass the string to `render_card`; it MUST NOT calculate the number itself. `artifact_hash` MAY select a page crop only. `card_text` MUST stay first and remain exactly that card: seal, chips, ordered rows, kernel values, difference line only when the card set it, and any sentence the card set. A page-crop PNG MAY follow. When the result is a verified series, a Mermaid fence from `draw(series_spec(result))` MUST follow card/pictures. Last-four-quarters MUST go through `execute` (fence with holes; no two-figure difference line). Every net result of BYMA MUST go through `ask` when the script has periods (fence copies verified values; no two-figure difference line); without a script it MUST abstain. After card/pictures/fence, the host MAY append agent-host-gated prose when authorization exists, or MUST append the controlled abstention template when authorization is empty or the gate falls through. Host MUST enforce authorization via verified claims/`authorized_values`; prompt MUST NOT be enforcement. Host MUST NOT let an LLM authorize `21262335`, `21259769`, the difference, or a bar height. `POST /claims/query` MUST stay the only product route (no candidates, no `delta`, no fence). Host tests MAY stub `recorded_book` and MUST NOT stub a Docling reader.
+
+(Previously: `measure(artifact_hash, question, ledger)` after a stubbed reader; verified cards required both neighbor rows.)
 
 #### Scenario: Consolidated value
 
@@ -74,26 +90,11 @@ The host MUST sit outside `src/claimledger/http/` and off the 13-path allowlist.
 - WHEN the host answers
 - THEN `card_text` first; trailing text MUST be gated verified prose or the controlled abstention template
 
-### Requirement: Always That Card
-
-One completion MUST start with exactly one `card_text` from `render_card`, including seal `ME ABSTENGO` and compare cards with both claims and, when produced, “Diferencia entre las dos cifras verificadas”. Rows MUST be verified evidence only. A page-crop MAY follow. Host-gated verified prose or the controlled abstention template MAY follow after card/pictures/fence in the same completion. A second chat message MUST NOT appear before or after the card.
-
-#### Scenario: Abstain keeps card then template
-
-- GIVEN seal `ME ABSTENGO` and empty authorization
-- WHEN the host completes
-- THEN the abstain card is first; trailing text is only the controlled abstention template; no picture, difference line, invented value, or LLM financial prose
-
-#### Scenario: Compare shows the code difference
-
-- GIVEN a quarterly book and “Comparar resultado neto consolidado 1T26 vs 2T26”
-- WHEN the host completes
-- THEN the card is first with `21262335`, `81956525`, and “Diferencia entre las dos cifras verificadas” + `60694190`; pictures MAY follow in claim order
-- AND neighbor rows MUST NOT be invented
-
 ### Requirement: No Invented Rows
 
 Rows MUST come only from verified claim evidence. Empty evidence, abstain, or a missing hash MUST NOT produce invented neighbor rows. A verified card MUST NOT require a DoclingReader hash. Pytest MUST NOT stub `DoclingReader`. Gitignored artifacts MUST NOT be committed.
+
+(Previously: an unreadable hash blocked the card, and pytest had to stub the reader.)
 
 #### Scenario: Empty evidence invents nothing
 
@@ -107,60 +108,21 @@ Rows MUST come only from verified claim evidence. Empty evidence, abstain, or a 
 - WHEN pytest runs
 - THEN they MUST NOT stub `DoclingReader`, and gitignored artifacts MUST stay uncommitted
 
-### Requirement: Features Off
+### Requirement: Always That Card
 
-Host MUST expose `GET /v1/models` and `POST /v1/chat/completions`. Assistant content MUST be card first, then optional page-crop, then optional Mermaid fence, then gated prose or controlled abstention template, in one completion. Titles, follow-ups, Knowledge, Open WebUI tools, MCP, Pipelines, Ollama, and Action buttons MUST stay off. The CLAIMLEDGER agent loop MUST run inside the host, not as Open WebUI tools/Pipelines.
+One completion MUST start with exactly one `card_text` from `render_card`, including seal `ME ABSTENGO` and compare cards with both claims and, when produced, “Diferencia entre las dos cifras verificadas”. Rows MUST be verified evidence only. A page-crop MAY follow. Host-gated verified prose or the controlled abstention template MAY follow after card/pictures/fence in the same completion. A second chat message MUST NOT appear before or after the card.
 
-#### Scenario: One card only
+(Previously: the compare scenario required a stubbed reader.)
 
-- GIVEN one question
-- WHEN `POST /v1/chat/completions` runs
-- THEN single card text first; optional picture/fence/gated-prose-or-template in same completion; no title, follow-up, Knowledge, Open WebUI tool, or MCP text
+#### Scenario: Abstain keeps card then template
 
-#### Scenario: Models lists no card
+- GIVEN seal `ME ABSTENGO` and empty authorization
+- WHEN the host completes
+- THEN the abstain card is first; trailing text is only the controlled abstention template; no picture, difference line, invented value, or LLM financial prose
 
-- GIVEN the host
-- WHEN `GET /v1/models` runs
-- THEN it answers and MUST NOT return a card
+#### Scenario: Compare shows the code difference
 
-### Requirement: Slim Screen
-
-The screen opened MUST be only `ghcr.io/open-webui/open-webui:v0.11.4-slim`. It MUST NOT be `latest` or `main`. `manual/ui.py` MAY remain and MUST NOT be that screen.
-
-#### Scenario: Pinned slim image
-
-- GIVEN compose
-- WHEN the image is read
-- THEN it MUST be `ghcr.io/open-webui/open-webui:v0.11.4-slim`
-
-### Requirement: Closed Bounds
-
-`dependencies` MUST stay `[]`. HTTP extra pin MUST stay `starlette==1.0.0`. Optional DeepSeek HTTP client extra MAY be pinned. 13-path allowlist and empty `src/claimledger/__init__.py` MUST stay. `chart/`, `orchestrate/`, `book/`, and `agent/` MUST stay off the allowlist. Gold MUST stay `21262335` and `21259769`; `cp-*` pairs unchanged. Kernel tests MUST NOT import `docling` or use Docker/network/PDF. Host/agent tests in-process, no bound port/Docker; DeepSeek mocked; search MAY be stubbed. `DEEPSEEK_API_KEY` MUST come from `.env` into claimledger only and MUST NEVER be committed. Phase 10 MUST NOT start. `http-query` and `gold-regression` unchanged.
-
-#### Scenario: Allowlist and kernel bans
-
-- GIVEN kernel tests and `pyproject.toml`
-- WHEN they run
-- THEN `dependencies` `[]`; allowlist 13 paths; no path contains `chart`, `orchestrate`, `book`, or `agent`; kernel tests ban docling/Docker/network/PDF
-
-#### Scenario: Later phases wait
-
-- GIVEN this change
-- WHEN scope is checked
-- THEN phase 10 MUST NOT start; `POST /claims/query` MUST NOT carry `delta`
-
-### Requirement: Product Image Without Retrieval Extra
-
-The product image MUST install `.[http,deepseek]` and MUST NOT install the `retrieval` extra. That extra MAY stay declared for optional offline RAG and its tests. `dependencies` MUST stay `[]`.
-
-#### Scenario: Image extras
-
-- GIVEN the product Dockerfile
-- WHEN the install line is read
-- THEN it MUST install `.[http,deepseek]` and MUST NOT install `retrieval`
-
-#### Scenario: Declared extra stays off the image
-
-- GIVEN `pyproject.toml` still declares a `retrieval` extra
-- WHEN the product image is built
-- THEN that extra MUST NOT be installed
+- GIVEN a quarterly book and “Comparar resultado neto consolidado 1T26 vs 2T26”
+- WHEN the host completes
+- THEN the card is first with `21262335`, `81956525`, and “Diferencia entre las dos cifras verificadas” + `60694190`; pictures MAY follow in claim order
+- AND neighbor rows MUST NOT be invented

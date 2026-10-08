@@ -199,6 +199,13 @@ def test_both_neighbor_rows_are_table_candidates(
     assert found[0] != found[1]
 
 
+def test_drawers_reexports_card_candidate() -> None:
+    from claimledger.card.candidate import Candidate as CardCandidate
+    from claimledger.retrieval.drawers import Candidate
+
+    assert Candidate is CardCandidate
+
+
 def test_candidate_has_no_claim_status(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

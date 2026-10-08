@@ -12,7 +12,7 @@ from claimledger.card.card import _METRIC_CHIP, ClaimCard, render_card
 from claimledger.claim import FinancialClaim
 from claimledger.identity import identity_key
 from claimledger.query import QueryResult
-from claimledger.retrieval.drawers import Candidate
+from claimledger.card.candidate import Candidate
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
 
@@ -29,6 +29,7 @@ _FORBIDDEN_IMPORTS = frozenset({"starlette", "docling", "llama_index", "open_web
 _CARD_PATHS = (
     "src/claimledger/card/__init__.py",
     "src/claimledger/card/card.py",
+    "src/claimledger/card/candidate.py",
     "tests/card/test_render_card.py",
 )
 
@@ -108,6 +109,37 @@ def _import_roots(path: Path) -> set[str]:
         elif isinstance(node, ast.ImportFrom) and node.module:
             roots.add(node.module.split(".")[0])
     return roots
+
+
+def test_one_consolidated_row_seals_without_two_row_sentence() -> None:
+    claim = _consolidated_claim()
+    result = QueryResult(status="verified", claims=(claim,), identity=claim.identity_key)
+    row = Candidate(drawer="tables", text=CONSOLIDATED_ROW, ref="h1")
+
+    card = render_card((row,), result)
+
+    assert card.seal == "VERIFICADO"
+    assert card.values == (CONSOLIDATED_VALUE,)
+    assert card.rows == (CONSOLIDATED_ROW,)
+    assert PARENT_ROW not in card.rows
+    assert card.sentence == ""
+    assert CONSOLIDATED_SENTENCE not in _visible(card)
+    assert PARENT_VALUE not in card.values
+
+
+def test_one_parent_row_seals_without_claiming_two_rows() -> None:
+    claim = _claim("2026-03-31", "parent_attributable", PARENT_VALUE)
+    result = QueryResult(status="verified", claims=(claim,), identity=claim.identity_key)
+    row = Candidate(drawer="tables", text=PARENT_ROW, ref="h1")
+
+    card = render_card((row,), result)
+
+    assert card.seal == "VERIFICADO"
+    assert card.values == (PARENT_VALUE,)
+    assert card.rows == (PARENT_ROW,)
+    assert CONSOLIDATED_ROW not in card.rows
+    assert "dos filas" not in card.sentence
+    assert "Consolidado" not in " ".join(card.chips)
 
 
 def test_consolidated_card() -> None:
@@ -331,9 +363,49 @@ def test_render_card_does_not_call_kernel(monkeypatch) -> None:
     )
 
 
+def _imported_modules(path: Path) -> set[str]:
+    tree = ast.parse(path.read_text(encoding="utf-8"))
+    modules: set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            modules.update(alias.name for alias in node.names)
+        elif isinstance(node, ast.ImportFrom) and node.module:
+            modules.add(node.module)
+            modules.update(f"{node.module}.{alias.name}" for alias in node.names)
+    return modules
+
+
+def test_card_imports_candidate_not_retrieval() -> None:
+    card_py = REPO_ROOT / "src" / "claimledger" / "card" / "card.py"
+    init_py = REPO_ROOT / "src" / "claimledger" / "card" / "__init__.py"
+    modules = _imported_modules(card_py)
+    assert "claimledger.card.candidate.Candidate" in modules or (
+        "claimledger.card.candidate" in modules and "Candidate" in card_py.read_text(encoding="utf-8")
+    )
+    assert "claimledger.card.candidate" in modules
+    joined = " ".join(sorted(modules))
+    assert "claimledger.retrieval" not in joined
+    assert "DoclingReader" not in card_py.read_text(encoding="utf-8")
+    assert "Candidate" not in init_py.read_text(encoding="utf-8")
+
+
 def test_card_stays_off_kernel_allowlist() -> None:
     card_py = REPO_ROOT / "src" / "claimledger" / "card" / "card.py"
+    candidate_py = REPO_ROOT / "src" / "claimledger" / "card" / "candidate.py"
     assert _import_roots(card_py).isdisjoint(_FORBIDDEN_IMPORTS)
+    assert _import_roots(candidate_py).isdisjoint(_FORBIDDEN_IMPORTS)
+    for path in (card_py, candidate_py):
+        modules = _imported_modules(path)
+        assert all("retrieval" not in name and "DoclingReader" not in name for name in modules)
+        assert all(
+            name != "starlette"
+            and name != "docling"
+            and not name.startswith("docling.")
+            and name != "llama_index"
+            and not name.startswith("llama_index.")
+            and name != "open_webui"
+            for name in modules
+        )
     allowlist = _kernel_scan_paths()
     assert len(allowlist) == 13
     for path in _CARD_PATHS:

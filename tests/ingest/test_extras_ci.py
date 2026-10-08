@@ -44,6 +44,18 @@ def test_ingest_extra_owns_httpx_not_docling() -> None:
     assert "httpx==0.28.1" in extras.get("deepseek", [])
 
 
+def test_product_image_installs_http_deepseek_not_retrieval() -> None:
+    dockerfile = (REPO / "Dockerfile").read_text(encoding="utf-8")
+    pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
+    workflow = (REPO / ".github" / "workflows" / "pytest.yml").read_text(encoding="utf-8")
+    assert '".[http,deepseek]"' in dockerfile
+    assert "retrieval" not in dockerfile
+    assert "[http,retrieval]" not in dockerfile
+    assert "retrieval" in _optional_deps(pyproject)
+    assert "--extra retrieval" in workflow
+    assert "dependencies = []" in pyproject
+
+
 def test_pytest_workflow_extras_matrix() -> None:
     text = (REPO / ".github" / "workflows" / "pytest.yml").read_text(encoding="utf-8")
     assert "--extra dev" in text

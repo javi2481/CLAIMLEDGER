@@ -8,7 +8,7 @@ COPY manual ./manual
 
 # The product extra is starlette only. uvicorn is the manual-test process
 # that binds the existing app; it is not a product pin in pyproject.toml.
-RUN pip install --no-cache-dir ".[http,retrieval]" "uvicorn==0.44.0"
+RUN pip install --no-cache-dir ".[http,deepseek]" "uvicorn==0.44.0"
 
 EXPOSE 8000
 

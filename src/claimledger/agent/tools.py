@@ -11,7 +11,6 @@ from claimledger.ledger import Ledger
 from claimledger.lookup import understand
 from claimledger.orchestrate.plan import execute
 from claimledger.query import QueryResult, query
-from claimledger.retrieval.drawers import retrieve
 
 
 def verify(question: str, ledger: Ledger | None = None) -> dict[str, Any]:
@@ -29,6 +28,10 @@ def verify(question: str, ledger: Ledger | None = None) -> dict[str, Any]:
 
 
 def search(artifact_hash: str, question: str) -> dict[str, Any]:
+    try:
+        from claimledger.retrieval.drawers import retrieve
+    except ImportError:
+        return {"hits": []}
     candidates = retrieve(artifact_hash, "tables", question)
     hits = [
         {"text": candidate.text, "ref": candidate.ref, "page": None}

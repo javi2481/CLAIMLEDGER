@@ -6,6 +6,7 @@ from claimledger.agent.gate import gate_prose
 from claimledger.agent.loop import LoopOutcome, run as run_agent
 from claimledger.agent.template import ABSTENTION_TEMPLATE
 from claimledger.book.ask import ask, read_script
+from claimledger.card.candidate import Candidate, candidates_from_claims
 from claimledger.card.card import render_card
 from claimledger.chart.series import draw, series_spec
 from claimledger.crop.attach import attach
@@ -15,7 +16,6 @@ from claimledger.openwebui.text import card_text
 from claimledger.orchestrate.plan import execute
 from claimledger.period.difference import difference
 from claimledger.query import QueryResult
-from claimledger.retrieval.drawers import Candidate, retrieve
 
 
 def reply(artifact_hash: str, question: str) -> str:
@@ -24,12 +24,14 @@ def reply(artifact_hash: str, question: str) -> str:
     if series is None:
         series = ask(question, book, read_script())
     if series is None:
-        candidates, result = measure(artifact_hash, question, book)
+        candidates, result = measure(question, book)
         gaps: tuple[str, ...] = ()
         subtracted = difference(result)
     else:
-        candidates = retrieve(artifact_hash, "tables", question)
         result = series.result
+        candidates = (
+            candidates_from_claims(result.claims) if result.status == "verified" else ()
+        )
         gaps = series.gaps
         subtracted = None
     body = _body(artifact_hash, candidates, result, gaps, subtracted)

@@ -2,20 +2,14 @@
 
 from __future__ import annotations
 
-from dataclasses import dataclass
 from typing import Literal, cast
+
+from claimledger.card.candidate import Candidate
 
 DrawerName = Literal["tables", "narrative"]
 
 _DRAWERS = frozenset({"tables", "narrative"})
 _TABLE_LABEL = "table"
-
-
-@dataclass(frozen=True)
-class Candidate:
-    drawer: DrawerName
-    text: str
-    ref: str
 
 
 def retrieve(

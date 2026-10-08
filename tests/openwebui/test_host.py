@@ -5,15 +5,14 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+from dataclasses import replace
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 
 import claimledger.ingest.store as ingest_store
 from claimledger.agent.template import ABSTENTION_TEMPLATE
 from claimledger.card.card import ClaimCard
-from claimledger.ingest.types import IngestError
 from claimledger.openwebui.reply import reply
 from claimledger.openwebui.text import card_text
 
@@ -30,12 +29,43 @@ _SENTENCE = "encontré estas dos filas; verifiqué la consolidada"
 _REASON = "filas copiadas"
 
 
+def _quarterly_book():
+    from claimledger.evidence import FinancialEvidence
+    from claimledger.identity import identity_key
+    from claimledger.ledger import Ledger
+
+    book = Ledger.seed()
+    rows = (
+        ("2026-03-31", "consolidated", "21.262.335", "RESULTADO NETO DEL PERÍODO"),
+        ("2026-03-31", "parent_attributable", "21.259.769", "controlante"),
+        ("2026-06-30", "consolidated", "81.956.525", "RESULTADO NETO DEL PERÍODO"),
+    )
+    for period, scope, text, label in rows:
+        key = identity_key("BYMA", period, "income_statement", scope, "net_income")
+        current = book.get(key)
+        assert current is not None
+        book.upsert(
+            replace(
+                current,
+                evidence=(
+                    FinancialEvidence(
+                        document_id="#/tables/1",
+                        artifact_hash="book",
+                        page=1,
+                        text=text,
+                        label=label,
+                    ),
+                ),
+            )
+        )
+    return book
+
+
 @pytest.fixture(autouse=True)
 def _stub_quarterly_book(monkeypatch: pytest.MonkeyPatch) -> None:
     import claimledger.openwebui.reply as reply_mod
-    from claimledger.ledger import Ledger
 
-    monkeypatch.setattr(reply_mod, "recorded_book", Ledger.seed)
+    monkeypatch.setattr(reply_mod, "recorded_book", _quarterly_book)
 
 
 def test_reply_uses_the_quarterly_book() -> None:
@@ -55,6 +85,25 @@ def test_reply_uses_the_quarterly_book() -> None:
     ]
     assert len(calls) == 1
     assert "Ledger.seed" not in source
+    assert "claimledger.retrieval" not in source
+    assert "DoclingReader" not in source
+    assert "retrieve" not in source
+
+
+def test_card_text_keeps_one_short_evidence_row() -> None:
+    card = ClaimCard(
+        seal=_SEAL,
+        chips=(_CHIP,),
+        rows=("21.262.335",),
+        values=(_VALUE,),
+        sentence="",
+        reason=None,
+    )
+
+    text = card_text(card)
+
+    assert text == "\n".join((_SEAL, _CHIP, "21.262.335", _VALUE))
+    assert "encontré estas dos filas" not in text
 
 
 def test_card_text_copies_fields() -> None:
@@ -163,25 +212,6 @@ def _neighbor_payload() -> dict:
     }
 
 
-def _parsed_nodes(payload: dict) -> list[SimpleNamespace]:
-    return [
-        SimpleNamespace(
-            text=item["text"],
-            metadata={"doc_items": [{"self_ref": item["ref"], "label": item["label"]}]},
-        )
-        for item in payload["parsed_nodes"]
-    ]
-
-
-def _install_parsed_reader(monkeypatch: pytest.MonkeyPatch) -> None:
-    from claimledger.retrieval import read as read_mod
-
-    def fake_read(artifact_hash: str) -> list[SimpleNamespace]:
-        return _parsed_nodes(ingest_store.load(artifact_hash))
-
-    monkeypatch.setattr(read_mod, "read_hashed_json", fake_read)
-
-
 def _prepare_neighbors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     artifacts = tmp_path / "docling"
     artifacts.mkdir()
@@ -189,7 +219,6 @@ def _prepare_neighbors(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> str:
     raw = _canonical_json_bytes(_neighbor_payload())
     digest = _sha256_hex(raw)
     (artifacts / f"{digest}.json").write_bytes(raw)
-    _install_parsed_reader(monkeypatch)
     return digest
 
 
@@ -200,18 +229,9 @@ def test_reply_consolidated_21262335(
 
     text = reply(digest, _CONSOLIDATED_QUESTION)
 
-    assert text == _with_agent_trailing(
-        "\n".join(
-            (
-                "VERIFICADO",
-                "BYMA · 1T26 · Consolidado · Resultado neto",
-                _NEIGHBOR_CONSOLIDATED,
-                _NEIGHBOR_PARENT,
-                _CONSOLIDATED_VALUE,
-                "encontré estas dos filas; verifiqué la consolidada",
-            )
-        )
-    )
+    assert text == _with_agent_trailing(_consolidated_card())
+    assert "21.262.335" in text
+    assert "encontré estas dos filas" not in text
     assert text.startswith("VERIFICADO\n")
     assert text.endswith(ABSTENTION_TEMPLATE)
     assert _CONSOLIDATED_VALUE in text
@@ -225,21 +245,11 @@ def test_reply_parent_21259769_both_rows(
 
     text = reply(digest, _PARENT_QUESTION)
 
-    assert text == _with_agent_trailing(
-        "\n".join(
-            (
-                "VERIFICADO",
-                "BYMA · 1T26 · Controlante · Resultado neto",
-                _NEIGHBOR_CONSOLIDATED,
-                _NEIGHBOR_PARENT,
-                _PARENT_VALUE,
-                "encontré estas dos filas; verifiqué la controlante",
-            )
-        )
-    )
+    assert text == _with_agent_trailing(_parent_card())
     assert _PARENT_VALUE in text
-    assert _NEIGHBOR_CONSOLIDATED in text
-    assert _NEIGHBOR_PARENT in text
+    assert "21.259.769" in text
+    assert "21.262.335" not in text
+    assert "encontré estas dos filas" not in text
     assert text.endswith(ABSTENTION_TEMPLATE)
 
 
@@ -250,16 +260,7 @@ def test_reply_abstain_adds_no_verified_value(
 
     text = reply(digest, _ABSTAIN_QUESTION)
 
-    assert text == _with_agent_trailing(
-        "\n".join(
-            (
-                "ME ABSTENGO",
-                _NEIGHBOR_CONSOLIDATED,
-                _NEIGHBOR_PARENT,
-                "recipe_no_extract",
-            )
-        )
-    )
+    assert text == _with_agent_trailing(_abstain_card())
     assert text.startswith("ME ABSTENGO\n")
     assert text.endswith(ABSTENTION_TEMPLATE)
     assert "ME ABSTENGO" in text
@@ -457,7 +458,6 @@ def _prepare_picture(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> tuple[s
     page_two = _png_bytes(_rgb(29))
     (artifacts / f"{digest}.p1.png").write_bytes(page_one)
     (artifacts / f"{digest}.p2.png").write_bytes(page_two)
-    _install_parsed_reader(monkeypatch)
     return digest, _crop_markdown(page_one), _crop_markdown(page_two)
 
 
@@ -466,23 +466,25 @@ def _consolidated_card() -> str:
         (
             "VERIFICADO",
             "BYMA · 1T26 · Consolidado · Resultado neto",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
+            "21.262.335",
             _CONSOLIDATED_VALUE,
-            "encontré estas dos filas; verifiqué la consolidada",
+        )
+    )
+
+
+def _parent_card() -> str:
+    return "\n".join(
+        (
+            "VERIFICADO",
+            "BYMA · 1T26 · Controlante · Resultado neto",
+            "21.259.769",
+            _PARENT_VALUE,
         )
     )
 
 
 def _abstain_card() -> str:
-    return "\n".join(
-        (
-            "ME ABSTENGO",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
-            "recipe_no_extract",
-        )
-    )
+    return "\n".join(("ME ABSTENGO", "recipe_no_extract"))
 
 
 def _compare_card() -> str:
@@ -491,8 +493,8 @@ def _compare_card() -> str:
             "VERIFICADO",
             "BYMA · 1T26 · Consolidado · Resultado neto",
             "BYMA · 2T26 · Consolidado · Resultado neto",
-            _NEIGHBOR_CONSOLIDATED,
-            _NEIGHBOR_PARENT,
+            "21.262.335",
+            "81.956.525",
             _CONSOLIDATED_VALUE,
             _SECOND_QUARTER_VALUE,
             _DIFFERENCE_LINE,
@@ -596,19 +598,32 @@ def test_reply_picture_follows_card(
     assert _docling_modules() == before_docling
 
 
-def test_reply_bad_hash_raises_and_invents_no_rows(
+def test_empty_evidence_invents_nothing(monkeypatch: pytest.MonkeyPatch) -> None:
+    import claimledger.openwebui.reply as reply_mod
+    from claimledger.ledger import Ledger
+
+    monkeypatch.setattr(reply_mod, "recorded_book", Ledger.seed)
+
+    text = reply("0" * 64, _CONSOLIDATED_QUESTION)
+
+    assert _CONSOLIDATED_VALUE in text
+    assert text.startswith("VERIFICADO\n")
+    assert "21.262.335" not in text
+    assert "21.259.769" not in text
+    assert "encontré estas dos filas" not in text
+
+
+def test_reply_bad_hash_invents_no_rows(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     _prepare_neighbors(tmp_path, monkeypatch)
 
-    with pytest.raises((IngestError, json.JSONDecodeError)) as caught:
-        reply("0" * 64, _CONSOLIDATED_QUESTION)
+    text = reply("0" * 64, _CONSOLIDATED_QUESTION)
 
-    detail = str(caught.value)
-    assert _NEIGHBOR_CONSOLIDATED not in detail
-    assert _NEIGHBOR_PARENT not in detail
-    assert _CONSOLIDATED_VALUE not in detail
-    assert _PARENT_VALUE not in detail
+    assert text == _with_agent_trailing(_consolidated_card())
+    assert "encontré estas dos filas" not in text
+    assert _NEIGHBOR_PARENT not in text
+    assert _PARENT_VALUE not in text
 
 
 def _host_request(app: object, method: str, path: str, **kwargs: object):
@@ -682,18 +697,12 @@ def test_bad_body_is_400_and_skips_measure(monkeypatch: pytest.MonkeyPatch) -> N
     assert response.json() == {"error": "unreadable_artifact"}
 
 
-def test_bad_hash_is_400_and_skips_render(
+def test_bad_hash_still_returns_the_card(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     from claimledger.openwebui.app import MODEL_ID, build_host
-    import claimledger.openwebui.reply as reply_mod
 
     _prepare_neighbors(tmp_path, monkeypatch)
-
-    def fail_render(*_args: object, **_kwargs: object) -> None:
-        raise AssertionError("render_card")
-
-    monkeypatch.setattr(reply_mod, "render_card", fail_render)
     response = _host_request(
         build_host("0" * 64),
         "POST",
@@ -701,9 +710,11 @@ def test_bad_hash_is_400_and_skips_render(
         json={"model": MODEL_ID, "messages": [{"role": "user", "content": _CONSOLIDATED_QUESTION}]},
     )
     _assert_in_process(response)
-    assert response.status_code == 400
-    assert response.json() == {"error": "unreadable_artifact"}
-    assert _CONSOLIDATED_VALUE not in response.text
+    assert response.status_code == 200
+    content = response.json()["choices"][0]["message"]["content"]
+    assert content.startswith(_consolidated_card())
+    assert "encontré estas dos filas" not in content
+    assert _NEIGHBOR_PARENT not in content
 
 
 def test_stream_is_one_card_then_done(
@@ -911,7 +922,7 @@ def test_query_and_card_stay_picture_free() -> None:
     from claimledger.ledger import RECIPE_ROWS, Ledger
     from claimledger.lookup import understand
     from claimledger.query import query
-    from claimledger.retrieval.drawers import Candidate
+    from claimledger.card.candidate import Candidate
 
     consolidated = claims_query({"question": _CONSOLIDATED_QUESTION}, Ledger.seed())
     parent = claims_query({"question": _PARENT_QUESTION}, Ledger.seed())

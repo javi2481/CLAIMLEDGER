@@ -219,7 +219,7 @@ Pass MUST `load_or_convert` once per PDF in `docs/archivos_muestra` (ten BYMA). 
 
 ### Requirement: Import-Free Recipe Extract Path
 
-`extract_recipe`, `ground`, and the product book/query path for hashed recipe claims MUST NOT import `docling`, `docling_core`, or `torch`, and MUST NOT load an in-process Docling pin (`PINNED_DOCLING` or equivalent) for body listing or grid materialization. Open WebUI `reply` / `DoclingReader` / Docker `.[retrieval]` remain out of scope (documented follow-up). Convert via local docling-serve and graph pin rules are unchanged.
+`extract_recipe`, `ground`, and the product book/query path for hashed recipe claims MUST NOT import `docling`, `docling_core`, or `torch`, and MUST NOT load an in-process Docling pin (`PINNED_DOCLING` or equivalent) for body listing or grid materialization. Product `reply`, `measure`, and card MUST NOT import `DoclingReader`. The product image MUST NOT install `.[retrieval]`. Convert via local docling-serve and graph pin rules are unchanged. Gold numbers MUST stay frozen. Kernel tests MUST NOT import `docling`.
 
 #### Scenario: Extract sources ban Docling imports
 
@@ -233,11 +233,12 @@ Pass MUST `load_or_convert` once per PDF in `docs/archivos_muestra` (ten BYMA). 
 - WHEN `recorded_book` / `ground` / `query` run for recipe claims
 - THEN those modules MUST NOT require `docling` / `docling_core` / `torch` installed
 
-#### Scenario: Reply retrieval remains deferred
+#### Scenario: Reply retrieval is no longer deferred
 
-- GIVEN this change
-- WHEN scope is applied
-- THEN `reply.py`, `retrieval/*`, and Dockerfile `.[retrieval]` MUST NOT be required to drop `DoclingReader`
+- GIVEN `reply`, `measure`, `card`, and the product Dockerfile
+- WHEN imports and install extras are read
+- THEN those modules MUST NOT import `DoclingReader`
+- AND the image MUST NOT install `.[retrieval]`
 
 ### Requirement: Quarterly Book
 

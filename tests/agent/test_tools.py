@@ -46,7 +46,8 @@ def test_search_returns_text_page_ref_only(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import claimledger.agent.tools as tools
-    from claimledger.retrieval.drawers import Candidate
+    import claimledger.retrieval.drawers as drawers
+    from claimledger.card.candidate import Candidate
 
     hits = (
         Candidate(
@@ -56,7 +57,7 @@ def test_search_returns_text_page_ref_only(
         ),
     )
     monkeypatch.setattr(
-        tools,
+        drawers,
         "retrieve",
         lambda artifact_hash, drawer, question: hits,
     )
@@ -78,10 +79,11 @@ def test_search_never_authorizes_digits_in_text(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     import claimledger.agent.tools as tools
-    from claimledger.retrieval.drawers import Candidate
+    import claimledger.retrieval.drawers as drawers
+    from claimledger.card.candidate import Candidate
 
     monkeypatch.setattr(
-        tools,
+        drawers,
         "retrieve",
         lambda *_a, **_k: (
             Candidate(drawer="tables", text="21.262.335", ref="#/tables/1"),
@@ -93,6 +95,31 @@ def test_search_never_authorizes_digits_in_text(
     assert "authorized_values" not in result
     assert "verified" not in result
     assert result["hits"][0]["text"] == "21.262.335"
+
+
+def test_search_import_error_returns_empty_hits(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    import builtins
+    import sys
+
+    import claimledger.agent.tools as tools
+
+    monkeypatch.delitem(sys.modules, "claimledger.retrieval.drawers", raising=False)
+    real_import = builtins.__import__
+
+    def blocked(name, globals=None, locals=None, fromlist=(), level=0):
+        if name == "claimledger.retrieval.drawers":
+            raise ImportError("retrieval extra is not installed")
+        return real_import(name, globals, locals, fromlist, level)
+
+    monkeypatch.setattr(builtins, "__import__", blocked)
+
+    result = tools.search("hash", "21.262.335")
+
+    assert result == {"hits": []}
+    assert result.get("authorized_values", []) == []
+    assert "21.262.335" not in str(result.get("authorized_values", []))
 
 
 def test_identity_key_comes_from_kernel_claims(

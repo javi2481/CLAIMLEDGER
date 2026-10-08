@@ -9,7 +9,7 @@ _FICHA_ROW_MAX = 240
 
 def _ficha_rows(rows: tuple[str, ...]) -> tuple[str, ...]:
     filled = tuple(row for row in rows if row)
-    if len(filled) == 2 and all(len(row) <= _FICHA_ROW_MAX for row in filled):
+    if 1 <= len(filled) <= 2 and all(len(row) <= _FICHA_ROW_MAX for row in filled):
         return filled
     return ()
 

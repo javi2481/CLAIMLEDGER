@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 from claimledger.claim import FinancialClaim
 from claimledger.query import QueryResult
-from claimledger.retrieval.drawers import Candidate
+from claimledger.card.candidate import Candidate
 
 _PERIOD_CHIP = {"2026-03-31": "1T26", "2026-06-30": "2T26"}
 _SCOPE_CHIP = {
