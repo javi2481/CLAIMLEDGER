@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass
+from pathlib import Path
 
 from claimledger.identity import fold
 from claimledger.ledger import Ledger
@@ -27,9 +28,9 @@ class BookRun:
 
 
 def read_script() -> str:
-    from claimledger.graph.build import graph_json_path
-
-    path = graph_json_path().with_suffix(".cypher")
+    # Same repo root as graph_json_path, without importing the graph package.
+    # That import pulls pydantic, which the product image does not install.
+    path = Path(__file__).resolve().parents[3] / "artifacts" / "graph" / "graph.cypher"
     if not path.is_file():
         return ""
     return path.read_text(encoding="utf-8")

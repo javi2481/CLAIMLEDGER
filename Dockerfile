@@ -6,9 +6,13 @@ COPY pyproject.toml ./
 COPY src ./src
 COPY manual ./manual
 
-# The product extra is starlette only. uvicorn is the manual-test process
-# that binds the existing app; it is not a product pin in pyproject.toml.
-RUN pip install --no-cache-dir ".[http,deepseek]" "uvicorn==0.44.0"
+# Editable install keeps claimledger under /app/src. artifacts_dir() and
+# corpus_dir() walk three parents from that file to /app, where Compose
+# mounts the hashed JSON and the sample PDFs. A regular install copies the
+# package into site-packages and those walks miss both mounts.
+# uvicorn is the manual-test process that binds the existing app; it is not
+# a product pin in pyproject.toml.
+RUN pip install --no-cache-dir -e ".[http,deepseek]" "uvicorn==0.44.0" "pillow==11.1.0"
 
 EXPOSE 8000
 

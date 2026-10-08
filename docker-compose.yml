@@ -28,6 +28,7 @@ services:
       DOCLING_SERVE_URL: ${DOCLING_SERVE_URL:-http://docling-serve:5001}
     volumes:
       - ./artifacts/docling:/app/artifacts/docling:ro
+      - ./docs/archivos_muestra:/app/docs/archivos_muestra:ro
   openwebui:
     image: ghcr.io/open-webui/open-webui:v0.11.4-slim
     ports:

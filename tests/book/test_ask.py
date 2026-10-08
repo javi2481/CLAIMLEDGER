@@ -29,6 +29,19 @@ def test_other_questions_are_not_a_book() -> None:
     assert ask("precio de cierre de YPF el 3 de enero", ledger, _SCRIPT) is None
 
 
+def test_read_script_does_not_import_graph() -> None:
+    tree = ast.parse(
+        (_REPO / "src" / "claimledger" / "book" / "ask.py").read_text(encoding="utf-8")
+    )
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ImportFrom):
+            module = node.module or ""
+            assert "graph" not in module.split(".")
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                assert "graph" not in alias.name.split(".")
+
+
 def test_periods_follow_the_calendar() -> None:
     assert periods_in_script(_SCRIPT) == ("2026-03-31", "2026-06-30")
 

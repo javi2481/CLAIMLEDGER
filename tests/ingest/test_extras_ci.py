@@ -44,6 +44,15 @@ def test_ingest_extra_owns_httpx_not_docling() -> None:
     assert "httpx==0.28.1" in extras.get("deepseek", [])
 
 
+def test_product_image_keeps_src_layout_and_sample_corpus() -> None:
+    """pip install copies the package off /app/src, so parents[3] misses the mount."""
+    dockerfile = (REPO / "Dockerfile").read_text(encoding="utf-8")
+    compose = (REPO / "docker-compose.yml").read_text(encoding="utf-8")
+    assert '-e ".[http,deepseek]"' in dockerfile
+    assert "pillow==11.1.0" in dockerfile.casefold()
+    assert "./docs/archivos_muestra:/app/docs/archivos_muestra:ro" in compose
+
+
 def test_product_image_installs_http_deepseek_not_retrieval() -> None:
     dockerfile = (REPO / "Dockerfile").read_text(encoding="utf-8")
     pyproject = (REPO / "pyproject.toml").read_text(encoding="utf-8")
