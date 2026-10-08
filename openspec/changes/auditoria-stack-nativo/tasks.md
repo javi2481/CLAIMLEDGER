@@ -37,6 +37,8 @@ Decision needed before a call: No
 
 2026-10-07 call: `runs/2026-10-07/audit.md`. Phases 9, 11, 12, and 13 are in the tree. `_export` calls `CypherExporter`. No new `call-native` row. The earlier files stay.
 
+2026-10-08 call: `runs/2026-10-08/audit.md`. Product reading after `max-docling-parse`, `runtime-json-book`, and `reply-without-retrieval`. No new `call-native` row. Names the `setdefault` conflict gap. The earlier files stay.
+
 ## Step 2: Replacements (only after the file exists, and only if asked)
 
 The 2026-10-05 rows for the grid and the body walk are planned in `openspec/changes/extract-native-tables/`. That change applies them. This file does not.
